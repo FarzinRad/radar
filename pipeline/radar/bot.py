@@ -171,13 +171,23 @@ def run(loop_s=0):
     n = 0
     end = time.time() + loop_s
     for b in bots:
+        me = b.call("getMe")
+        if not me.get("ok"):        # توکن غلط یا API در دسترس نیست؛ بدون چاپ خود توکن
+            print(f"[bot] {b.name}: getMe failed — check the token secret", file=sys.stderr)
+            continue
+        print(f"[bot] {b.name}: connected as @{me['result'].get('username')}")
+        hook = b.call("getWebhookInfo").get("result") or {}
+        if hook.get("url"):         # با webhook فعال، getUpdates هیچ پیامی برنمی‌گرداند
+            b.call("deleteWebhook")
+            print(f"[bot] {b.name}: removed an old webhook")
         if not off.get(f"{b.name}_cmds"):
-            b.call("setMyCommands", commands=json.dumps([{"command": c, "description": d} for c, d in COMMANDS],
-                                                        ensure_ascii=False))
-            off[f"{b.name}_cmds"] = 1
+            ok = b.call("setMyCommands", commands=json.dumps([{"command": c, "description": d} for c, d in COMMANDS],
+                                                             ensure_ascii=False)).get("ok")
+            off[f"{b.name}_cmds"] = 1 if ok else 0
     while True:
         for b in bots:
             res = b.call("getUpdates", offset=off.get(b.name, 0), timeout=0, allowed_updates='["message"]')
+            print(f"[bot] {b.name}: {len(res.get('result', []))} new messages" if res.get("ok") else f"[bot] {b.name}: getUpdates failed")
             for u in res.get("result", []):
                 off[b.name] = u["update_id"] + 1
                 try:
