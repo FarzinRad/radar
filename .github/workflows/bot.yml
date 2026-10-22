@@ -1,0 +1,40 @@
+name: bot
+# ربات تلگرام و بله بدون سرور: هر ۱۵ دقیقه پیام‌های تازه را می‌خواند و جواب می‌دهد.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests cryptography
+      - name: خواندن پیام‌ها و جواب
+        working-directory: pipeline
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          BOT_STATE_KEY: ${{ secrets.BOT_STATE_KEY }}
+          BOT_INVITE_CODE: ${{ secrets.BOT_INVITE_CODE }}
+          PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+        run: python -m radar.bot
+      - name: ذخیره‌ی مشترکان (رمزنگاری‌شده)
+        run: |
+          git add state
+          if ! git diff --cached --quiet; then
+            git -c user.name=radar-bot -c user.email=radar-bot@users.noreply.github.com commit -q -m "bot: state"
+            git pull -q --rebase && git push -q
+          fi

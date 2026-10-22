@@ -1,0 +1,189 @@
+name: radar
+on:
+  schedule:
+    - cron: "17 */3 * * *"          # هر ۳ ساعت به وقت UTC؛ مدل‌ها هر ۶ ساعت اجرای تازه دارند
+  workflow_dispatch:
+    inputs:
+      test_city:
+        description: "برای آزمایش، یک هشدار برای این شهر بفرست (مثلاً تهران). خالی = اجرای عادی"
+        required: false
+        default: ""
+      score:
+        description: "کارنامه‌ی هفتگی را همین حالا دوباره بساز"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write      # ذخیره‌ی وضعیت هشدارها و اقلیم در مخزن
+  pages: write
+  id-token: write
+
+concurrency:
+  group: radar
+  cancel-in-progress: false
+
+env:
+  BOT_STATE_KEY: ${{ secrets.BOT_STATE_KEY }}
+  PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      alerts: ${{ steps.ingest.outputs.alerts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+      - run: pip install -r pipeline/requirements.txt
+
+      - name: تست منطق هشدار
+        working-directory: pipeline
+        run: python -m pytest -q tests
+
+      - name: دریافت داده، سطح خطر و تشخیص هشدار
+        id: ingest
+        working-directory: pipeline
+        env:
+          TEST_CITY: ${{ inputs.test_city }}
+          ALERT_MIN_LEVEL: ${{ vars.ALERT_MIN_LEVEL || '2' }}
+          ALERT_MAX_MEDIA: ${{ vars.ALERT_MAX_MEDIA || '4' }}
+          DAILY_REPORT: ${{ vars.DAILY_REPORT || '1' }}
+          ALERT_HORIZON_H: ${{ vars.ALERT_HORIZON_H || '24' }}
+        run: |
+          if python -m radar.ingest; then echo "ok=1" >> "$GITHUB_OUTPUT"; else echo "ok=0" >> "$GITHUB_OUTPUT"; fi
+          n=$(python -c "import json;print(len(json.load(open('../out/alerts.json'))))" 2>/dev/null || echo 0)
+          echo "alerts=$n" >> "$GITHUB_OUTPUT"
+          echo "هشدارهای این اجرا: $n"
+
+      - name: اگر دریافت شکست خورد، داده‌ی قبلی سایت بماند (با برچسب STALE)
+        if: steps.ingest.outputs.ok != '1'
+        run: mkdir -p web/data && curl -fsSL "$PUBLIC_BASE_URL/data/latest.json" -o web/data/latest.json || echo "داده‌ی قبلی هم نیست"
+
+      - name: اقلیم ERA5 شهرها (ادامه‌دار، روزی یک بار)
+        if: steps.ingest.outputs.ok == '1'
+        continue-on-error: true
+        working-directory: pipeline
+        run: |
+          if [ "$(date -u +%H)" = "00" ] || [ ! -f climate.json ]; then python -m radar.climate --budget "${{ vars.CLIMATE_BUDGET || '1500' }}"; fi
+
+      - name: ساخت عکس و ویدیوی کارت هشدار
+        id: render
+        working-directory: pipeline
+        run: |
+          priv=$(python -c "import json;print(len(json.load(open('../out/private/alerts.json'))))" 2>/dev/null || echo 0)
+          echo "private=$priv" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.ingest.outputs.alerts }}" != "0" ] || [ "$priv" != "0" ]; then
+            python -m playwright install --with-deps chromium
+            command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+            python -m radar.render
+            python -m radar.render --private
+          fi
+
+      # محل‌های اختصاصی مشترکان (روستا، محله) همین‌جا و فقط به خودشان فرستاده می‌شوند،
+      # تا اسم محل هیچ‌وقت در سایت، artifact یا لاگ عمومی نیاید.
+      - name: ارسال هشدار محل‌های اختصاصی
+        if: steps.render.outputs.private != '0'
+        working-directory: pipeline
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+        run: python -m radar.notify --private
+
+      - name: آرشیو پیش‌بینی‌ها و کارنامه‌ی هفتگی (شاخه‌ی data)
+        if: steps.ingest.outputs.ok == '1'
+        continue-on-error: true
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch -q --depth=1 origin data:refs/remotes/origin/data && git worktree add -q -B data archive origin/data
+          else
+            git worktree add -q --orphan -b data archive
+          fi
+          cd pipeline && python -m radar.archive --dir ../archive
+          # شنبه‌ها ۰۳ UTC (حدود ۷ صبح تهران)، یا اجرای دستی، یا وقتی هنوز کارنامه‌ای نیست
+          if [ "$(date -u +%u%H)" = "603" ] || [ "${{ inputs.score }}" = "true" ] || [ ! -f ../archive/scorecard.json ]; then
+            python -m radar.score --dir ../archive
+          fi
+          cd ../archive
+          git add -A
+          if ! git diff --cached --quiet; then
+            git -c user.name=radar-bot -c user.email=radar-bot@users.noreply.github.com commit -q -m "archive $(date -u +%FT%H)"
+            git push -q origin data
+          fi
+
+      - name: کارنامه روی سایت
+        run: if [ -f archive/scorecard.json ]; then cp archive/scorecard.json web/data/scorecard.json; fi
+
+      - name: ذخیره‌ی وضعیت هشدارها و اقلیم
+        run: |
+          date -u +%F > state/last_run.txt
+          git config user.name "radar-bot"
+          git config user.email "radar-bot@users.noreply.github.com"
+          git add state pipeline/climate.json
+          if ! git diff --cached --quiet; then
+            git commit -q -m "radar: state $(date -u +%FT%H:%MZ)"
+            git pull -q --rebase && git push -q
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - name: هشدارها برای مرحله‌ی ارسال
+        if: steps.ingest.outputs.alerts != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: alerts
+          retention-days: 1
+          path: |
+            out/alerts.json
+            web/media/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  notify:
+    needs: [build, deploy]
+    if: needs.build.outputs.alerts != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}      # آخرین فهرست مشترکان، نه نسخه‌ی شروع اجرا
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests requests-oauthlib cryptography
+      - uses: actions/download-artifact@v4
+        with:
+          name: alerts
+          path: .
+      - name: ارسال به تلگرام، بله، ntfy، X و اینستاگرام
+        working-directory: pipeline
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+          BALE_BOT_TOKEN: ${{ secrets.BALE_BOT_TOKEN }}
+          BALE_CHAT_IDS: ${{ secrets.BALE_CHAT_IDS }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_MODE: ${{ vars.IG_MODE || 'story' }}
+          DAILY_CHANNELS: ${{ vars.DAILY_CHANNELS || 'telegram,bale,ntfy' }}
+        run: python -m radar.notify

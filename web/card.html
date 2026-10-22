@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>کارت هشدار رادار</title>
+<meta name="theme-color" content="#05080D">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#05080D;--panel:#0B1620;--ink:#E6F1F7;--dim:#86A3B3;--line:#1B3242;--amber:#FFB547}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Vazirmatn,Tahoma,sans-serif}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:14px;padding:16px}
+canvas{width:min(100%,520px);height:auto;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.5);display:block}
+.bar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px}
+button,select{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:9px 16px;cursor:pointer}
+button.go{background:var(--amber);color:#1A1205;border-color:var(--amber);font-weight:700}
+button:disabled{opacity:.5;cursor:progress}
+.msg{color:var(--dim);font-size:13px;min-height:1.4em;text-align:center;max-width:520px}
+a{color:#5FC4E8}
+body.headless{padding:0;display:block}body.headless canvas{width:auto;border-radius:0;box-shadow:none}body.headless .ui{display:none}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="ui bar">
+  <select id="fmt" aria-label="قالب"><option value="post">پست ۴:۵</option><option value="story">استوری ۹:۱۶</option></select>
+  <button class="go" id="shareVid">اشتراک ویدیو</button>
+  <button id="sharePng">اشتراک عکس</button>
+  <button id="copyTxt">کپی متن</button>
+</div>
+<p class="ui msg" id="msg">روی گوشی، «اشتراک» مستقیم تلگرام، اینستاگرام (استوری یا Close Friends) و X را باز می‌کند.</p>
+<p class="ui msg"><a id="dash" href="./">باز کردن داشبورد</a></p>
+<script src="js/geo.js"></script>
+<script src="js/core.js"></script>
+<script src="js/card.js"></script>
+<script>
+const q=new URLSearchParams(location.search);
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+let P=null,view=q.get('view')||'city',fmt=q.get('fmt')||'post',anim=true,TEXT='';
+if(q.has('headless'))document.body.classList.add('headless');
+document.getElementById('fmt').value=fmt;
+function size(){const [w,h]=Card.SIZES[fmt];cv.width=w;cv.height=h}
+function frame(T){view==='iran'?Card.drawIran(cx,P,T,fmt):Card.draw(cx,P,T,fmt)}
+function base(){return (q.get('base')||location.href.replace(/card\.html.*$/,'')).replace(/\/$/,'')}
+async function load(){const r=await fetch('data/latest.json',{cache:'no-cache'});if(!r.ok)throw new Error('داده در دسترس نیست');const D=await r.json();if(window.__EXTRA_CITY)D.cities.push(window.__EXTRA_CITY);LV.init(D);
+  const snap=liveSnapshot('mix');const at=h=>{const k=LV.clock(h);return `${k.day} ${k.hm}`};
+  if(view==='iran'){const top=LV.d.cities.map(c=>({n:c.n,l:Math.max(...snap.HZ[c.n].L.all.slice(0,24)),k:snap.HZ[c.n].dom||(firstHz(snap.HZ[c.n])||{}).k})).filter(t=>t.l>=1).sort((a,b)=>b.l-a.l);
+    P={view:'iran',provLevels:snap.provLevels,top,stamp:liveStamp(),link:base()};TEXT=cardText(P);return}
+  const name=q.get('city')||'تهران';const c=LV.byN[name];if(!c)throw new Error('شهر پیدا نشد: '+name);const g=GEO.cities.find(x=>x.n===name)||{x:(c.lon-GEO.LON0)*GEO.K*GEO.C,y:(GEO.LAT0-c.lat)*GEO.K};
+  const H=snap.HZ[name];const e=LV.eta(c,0,'mix');
+  P=cardPayload({...c,x:g.x,y:g.y},H,{at,provEnd:snap.provEnd(c.p),provLevels:snap.provLevels,model:'اجماع '+fa(LV.d.models.filter(m=>m.ok).length)+' مدل',
+    stamp:liveStamp(),eta:H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'',link:base()+'/?city='+encodeURIComponent(name),test:q.has('test')});
+  document.getElementById('dash').href='./?city='+encodeURIComponent(name);
+  TEXT=cardText(P)}
+// برای رندر بی‌سر در GitHub Actions
+window.__frame=T=>{anim=false;frame(T);return cv.toDataURL('image/jpeg',.92)};
+window.__png=()=>{anim=false;frame(1.6);return cv.toDataURL('image/png')};
+window.__text=()=>TEXT;
+(async()=>{size();try{await Card.fontsReady();await load()}catch(err){document.getElementById('msg').textContent=err.message;window.__error=err.message;return}
+  window.__ready=true;const t0=performance.now();const loop=now=>{if(anim)frame((now-t0)/1000);requestAnimationFrame(loop)};requestAnimationFrame(loop)})();
+const msg=t=>document.getElementById('msg').textContent=t;
+document.getElementById('fmt').onchange=e=>{fmt=e.target.value;size()};
+document.getElementById('sharePng').onclick=async()=>{anim=false;frame(1.6);cv.toBlob(async b=>{const r=await Card.share(b,`radar-${P.city||'iran'}.png`,TEXT);msg(r==='download'?'عکس دانلود شد.':'');anim=true},'image/png')};
+document.getElementById('shareVid').onclick=async e=>{const b=e.currentTarget;b.disabled=true;anim=false;msg('در حال ضبط ۸ ثانیه…');
+  try{const blob=await Card.record(cv,frame,8);const ext=blob.type.includes('mp4')?'mp4':'webm';const r=await Card.share(blob,`radar-${P.city||'iran'}.${ext}`,TEXT);
+    msg(r==='download'?`ویدیو (${ext.toUpperCase()}) دانلود شد.${ext==='webm'?' برای اینستاگرام، سافاری یا کروم جدید MP4 می‌سازد.':''}`:'')}catch(err){msg('ضبط نشد: '+err.message)}b.disabled=false;anim=true};
+document.getElementById('copyTxt').onclick=async()=>{try{await navigator.clipboard.writeText(TEXT);msg('متن کپی شد.')}catch(e){msg(TEXT)}};
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+pipeline/.venv/
+__pycache__/
+.pytest_cache/
+out/
+web/media/
+web/data/latest.json
+.DS_Store
+archive/
