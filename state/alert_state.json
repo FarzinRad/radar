@@ -1,0 +1,62 @@
+{
+ "تبریز": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "مشهد": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "اصفهان": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "شیراز": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "اهواز": {
+  "lvl": 0,
+  "sent": null,
+  "eta": 40
+ },
+ "رشت": {
+  "lvl": 1,
+  "sent": null,
+  "eta": 4
+ },
+ "ارومیه": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "کرمانشاه": {
+  "lvl": 1,
+  "sent": null,
+  "eta": null
+ },
+ "بندرعباس": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "زاهدان": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "کرج": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "چابهار": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ }
+}
