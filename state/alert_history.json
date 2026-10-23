@@ -2,6 +2,14 @@
  {
   "city": "اهواز",
   "kind": "up",
+  "level": 3,
+  "dom": "dust",
+  "time": "2026-10-23T18:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "اهواز",
+  "kind": "up",
   "level": 2,
   "dom": "dust",
   "time": "2026-10-23T15:00:00+00:00",
