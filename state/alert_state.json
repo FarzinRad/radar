@@ -22,12 +22,12 @@
  "اهواز": {
   "lvl": 0,
   "sent": null,
-  "eta": 40
+  "eta": 39
  },
  "رشت": {
-  "lvl": 1,
+  "lvl": 0,
   "sent": null,
-  "eta": 4
+  "eta": 2
  },
  "ارومیه": {
   "lvl": 0,
@@ -55,6 +55,11 @@
   "eta": null
  },
  "چابهار": {
+  "lvl": 0,
+  "sent": null,
+  "eta": null
+ },
+ "تهران": {
   "lvl": 0,
   "sent": null,
   "eta": null
