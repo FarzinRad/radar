@@ -3,3 +3,4 @@ requests-oauthlib>=2.0
 playwright>=1.47
 pytest>=8
 cryptography>=42
+imageio-ffmpeg>=0.5

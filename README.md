@@ -78,6 +78,17 @@ cd pipeline && .venv/bin/python -m radar.render
 
 اگر سایت را روی دامنه‌ی دیگری می‌خواهی، متغیر `PUBLIC_BASE_URL` را در **Variables** بگذار؛ لینک‌های پیام‌ها از آن ساخته می‌شوند.
 
+### زمان‌بندی مطمئن با cron-job.org (رایگان، توصیه‌شده)
+
+زمان‌بندی خود گیت‌هاب برای مخزن‌های کم‌فعالیت گاهی ساعت‌ها عقب می‌افتد. یک سرویس رایگان بیرونی می‌تواند هر چند دقیقه workflowها را صدا بزند:
+
+1. در گیت‌هاب: **Settings (حساب) › Developer settings › Fine-grained tokens › Generate**؛ Repository access فقط `radar`، Permissions › **Actions: Read and write**.
+2. در cron-job.org دو job بساز، هر دو با Method **POST**، هدرهای `Authorization: Bearer <توکن>` و `Accept: application/vnd.github+json`، و Body `{"ref":"main"}`:
+   - **ربات** هر ۱۰ دقیقه: `https://api.github.com/repos/<نام‌کاربری>/radar/actions/workflows/bot.yml/dispatches`
+   - **رادار** هر ساعت: `https://api.github.com/repos/<نام‌کاربری>/radar/actions/workflows/radar.yml/dispatches`
+
+صدا زدن تکراری بی‌خطر است: اگر داده کمتر از ۳ ساعت عمر داشته باشد، اجرا در چند ثانیه تمام می‌شود و سهمیه‌ی Open-Meteo مصرف نمی‌شود.
+
 ### کانال‌ها و Secretها
 
 | کانال | Secret | چطور بگیری |

@@ -39,10 +39,22 @@ def _b64(data_url):
     return base64.b64decode(data_url.split(",", 1)[1])
 
 
+def _ffmpeg():
+    """ffmpeg سیستم، وگرنه نسخه‌ی آماده‌ی imageio-ffmpeg (بدون apt)."""
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+
+
 def render(items, seconds=8, fps=24, fmt="post", private=False):
     from playwright.sync_api import sync_playwright
 
-    if shutil.which("ffmpeg") is None:
+    ffmpeg = _ffmpeg()
+    if not ffmpeg:
         print("[render] ffmpeg not found; only PNG", file=sys.stderr)
     media = PRIVATE_MEDIA if private else MEDIA
     media.mkdir(parents=True, exist_ok=True)
@@ -55,7 +67,10 @@ def render(items, seconds=8, fps=24, fmt="post", private=False):
     w, h = (1080, 1920) if fmt == "story" else (1080, 1350)
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch()
+            try:        # کروم ازپیش‌نصب رانر گیت‌هاب؛ نصب مرورگر با apt گاهی گیر می‌کند
+                browser = p.chromium.launch(channel="chrome")
+            except Exception:
+                browser = p.chromium.launch()
             for i, a in enumerate(items):
                 if not a.get("media"):
                     continue
@@ -78,12 +93,12 @@ def render(items, seconds=8, fps=24, fmt="post", private=False):
                 png = media / f"{slug}.png"
                 png.write_bytes(_b64(page.evaluate("__png()")))
                 a["png"] = png.name
-                if shutil.which("ffmpeg"):
+                if ffmpeg:
                     with tempfile.TemporaryDirectory() as td:
                         for k in range(int(seconds * fps)):
                             Path(td, f"f{k:04d}.jpg").write_bytes(_b64(page.evaluate(f"__frame({k / fps})")))
                         mp4 = media / f"{slug}.mp4"
-                        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(fps), "-i", f"{td}/f%04d.jpg",
+                        subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", f"{td}/f%04d.jpg",
                                         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "24",
                                         "-movflags", "+faststart", str(mp4)], check=True)
                         a["mp4"] = mp4.name

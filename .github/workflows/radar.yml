@@ -1,7 +1,7 @@
 name: radar
 on:
   schedule:
-    - cron: "17 */3 * * *"          # هر ۳ ساعت به وقت UTC؛ مدل‌ها هر ۶ ساعت اجرای تازه دارند
+    - cron: "17 * * * *"            # هر ساعت تلاش؛ کار واقعی فقط وقتی داده ۳ ساعت کهنه شده (gate)
   workflow_dispatch:
     inputs:
       test_city:
@@ -27,7 +27,25 @@ env:
   PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
 
 jobs:
+  # زمان‌بندی گیت‌هاب گاهی ساعت‌ها عقب می‌افتد، پس از بیرون هم صدا زده می‌شود (README).
+  # اگر داده هنوز تازه است، اجرای تکراری در چند ثانیه تمام می‌شود و سهمیه‌ی Open-Meteo هدر نمی‌رود.
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      go: ${{ steps.age.outputs.go }}
+    steps:
+      - id: age
+        run: |
+          if [ -n "${{ inputs.test_city }}" ] || [ "${{ inputs.score }}" = "true" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          gen=$(curl -fsSL -m 30 "$PUBLIC_BASE_URL/data/latest.json" | python3 -c "import json,sys;print(json.load(sys.stdin)['generated'])" 2>/dev/null || echo "")
+          age=$(python3 -c "import sys;from datetime import datetime,timezone as z;g='$gen';print(int((datetime.now(z.utc)-datetime.fromisoformat(g)).total_seconds()//60) if g else 9999)")
+          echo "سن داده: $age دقیقه"
+          if [ "$age" -ge 170 ]; then echo "go=true" >> "$GITHUB_OUTPUT"; else echo "go=false" >> "$GITHUB_OUTPUT"; fi
+
   build:
+    needs: gate
+    if: needs.gate.outputs.go == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     outputs:
@@ -73,13 +91,14 @@ jobs:
 
       - name: ساخت عکس و ویدیوی کارت هشدار
         id: render
+        timeout-minutes: 10
+        continue-on-error: true      # اگر ویدیو نشد، داده‌ی تازه باز هم منتشر می‌شود
         working-directory: pipeline
         run: |
           priv=$(python -c "import json;print(len(json.load(open('../out/private/alerts.json'))))" 2>/dev/null || echo 0)
           echo "private=$priv" >> "$GITHUB_OUTPUT"
           if [ "${{ steps.ingest.outputs.alerts }}" != "0" ] || [ "$priv" != "0" ]; then
-            python -m playwright install --with-deps chromium
-            command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+            command -v google-chrome || python -m playwright install --with-deps chromium
             python -m radar.render
             python -m radar.render --private
           fi
@@ -88,6 +107,8 @@ jobs:
       # تا اسم محل هیچ‌وقت در سایت، artifact یا لاگ عمومی نیاید.
       - name: ارسال هشدار محل‌های اختصاصی
         if: steps.render.outputs.private != '0'
+        timeout-minutes: 5
+        continue-on-error: true
         working-directory: pipeline
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -145,6 +166,7 @@ jobs:
 
   deploy:
     needs: build
+    if: needs.build.result == 'success'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
