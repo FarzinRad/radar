@@ -25,7 +25,7 @@
   "eta": null
  },
  "رشت": {
-  "lvl": 0,
+  "lvl": 1,
   "sent": null,
   "eta": null
  },
@@ -42,7 +42,7 @@
  "بندرعباس": {
   "lvl": 0,
   "sent": null,
-  "eta": 60
+  "eta": null
  },
  "زاهدان": {
   "lvl": 0,
@@ -64,5 +64,5 @@
   "sent": null,
   "eta": null
  },
- "__daily": "2026-10-24"
+ "__daily": "2026-10-25"
 }
