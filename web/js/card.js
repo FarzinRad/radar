@@ -58,6 +58,15 @@ function miniMap(c,x,y,w,h,P,T,big){if(typeof GEO==='undefined')return;if(!PATHS
     c.globalAlpha=1;c.fillStyle=col;c.beginPath();c.arc(px,py,(big?8:6)/s,0,7);c.fill();c.strokeStyle=BG;c.lineWidth=2/s;c.stroke()}
   c.restore()}
 
+// «تلگرام @a · اینستاگرام @b» از راست به چپ؛ اسم شبکه کم‌رنگ، آدرس پررنگ و چپ‌به‌راست
+function socialRow(c,s,x,y){const items=socialItems(s);if(!items.length)return;c.save();c.direction='ltr';c.textAlign='left';
+  let px=x;items.forEach(([name,handle],i)=>{
+    if(i){font(c,21,500);px-=c.measureText(' · ').width;c.fillStyle=DIM;c.fillText(' · ',px,y)}
+    font(c,21,600,M);const hw=c.measureText(handle).width;font(c,21,500);const nw=c.measureText(name+' ').width;
+    px-=hw+nw;font(c,21,600,M);c.fillStyle='#5FC4E8';c.fillText(handle,px,y);
+    c.direction='rtl';c.textAlign='right';font(c,21,500);c.fillStyle=DIM;c.fillText(name+' ',px+hw+nw,y);c.direction='ltr';c.textAlign='left'});
+  c.restore()}
+
 /* ---------- کارت شهر ---------- */
 function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt==='story';c.save();c.setTransform(1,0,0,1,0,0);
   c.fillStyle=BG;c.fillRect(0,0,W,H);c.strokeStyle='rgba(110,170,200,.06)';c.lineWidth=1;for(let x=0;x<W;x+=54){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}for(let y=0;y<H;y+=54){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
@@ -104,7 +113,7 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
   font(c,26,600);c.fillStyle=INK;if(P.eta)rtl(c,'کی می‌رسد؟ '+P.eta,W-pad,y);
   if(story){y+=40;const mh2=360;c.fillStyle=PANEL;rr(c,pad,y,sw,mh2,26);c.fill();miniMap(c,pad+20,y+16,sw-40,mh2-32,P,T,true);y+=mh2+60}
   const fy=H-(story?120:66);font(c,20,500);c.fillStyle=DIM;rtl(c,`پیش‌بینی مدل${P.model?' ('+P.model+')':''}، نه هشدار رسمی · هشدار رسمی را از سازمان هواشناسی بگیر.`,W-pad,fy);
-  if(P.link){font(c,19,500,M);c.fillStyle='#5FC4E8';ltr(c,decodeURI(P.link).replace(/^https?:\/\//,''),W-pad,fy+34,'right')}
+  socialRow(c,P.social,W-pad,fy+36)
   c.restore()}
 
 /* ---------- کارت وضعیت کشور (گزارش صبحگاهی) ---------- */
@@ -114,7 +123,7 @@ function drawIran(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56;c.save()
   y+=mh+70;font(c,30,800);c.fillStyle=INK;rtl(c,P.top.length?'شهرهای در خطر، ۲۴ ساعت آینده':'هیچ شهری در خطر نیست.',W-pad,y);y+=24;
   P.top.slice(0,fmt==='story'?10:6).forEach((t,i)=>{const yy=y+i*62;c.fillStyle=LVCOL[t.l];rr(c,W-pad-20,yy+14,20,20,5);c.fill();font(c,30,700);c.fillStyle=INK;rtl(c,t.n,W-pad-40,yy+36);
     font(c,26,500);c.fillStyle=DIM;rtl(c,`${LVLN[t.l]} · ${HZN[t.k]||''}`,W-pad-300,yy+36);if(t.k)icon(c,t.k,pad,yy+12,28,LVCOL[t.l])});
-  font(c,20,500);c.fillStyle=DIM;rtl(c,'پیش‌بینی مدل، نه هشدار رسمی · سازمان هواشناسی',W-pad,H-54);if(P.link){font(c,20,500,M);c.fillStyle='#5FC4E8';ltr(c,P.link.replace(/^https?:\/\//,''),pad,H-54)}
+  font(c,20,500);c.fillStyle=DIM;rtl(c,'پیش‌بینی مدل، نه هشدار رسمی · سازمان هواشناسی',W-pad,H-(socialItems(P.social).length?72:54));socialRow(c,P.social,W-pad,H-36)
   c.restore()}
 
 async function fontsReady(){if(!document.fonts)return;try{await Promise.all(['400','500','600','700','800'].map(w=>document.fonts.load(`${w} 40px Vazirmatn`,'آب')).concat([document.fonts.load('500 20px "JetBrains Mono"','0')]));await document.fonts.ready}catch(e){}}

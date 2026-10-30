@@ -98,7 +98,7 @@ def build(now):
     out_cities = [c for c in out_cities if not c.get("x")]
     models = [{"id": rid, "name": nm, "full": full, "ok": model_ok[rid] > 0} for rid, _, nm, full in cfg.MODELS]
     return {"v": 1, "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "t0": now.isoformat(timespec="seconds"), "now": P, "hours": n, "source": "Open-Meteo",
+            "t0": now.isoformat(timespec="seconds"), "now": P, "hours": n, "source": "Open-Meteo", "social": cfg.social(),
             "models": models, "cities": out_cities, "grid": grid, "systems": sysl}, private
 
 

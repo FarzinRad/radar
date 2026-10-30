@@ -59,6 +59,19 @@ def save_json(path, obj, compact=False):
     path.write_text(txt, encoding="utf-8")
 
 
+SOCIAL = [("telegram", "تلگرام"), ("instagram", "اینستاگرام"), ("x", "X"), ("bale", "بله")]
+
+
+def social():
+    """آدرس‌های سوشال روی کارت‌ها، از Variableهای SOCIAL_TELEGRAM و ... ؛ خالی‌ها حذف می‌شوند."""
+    out = {}
+    for k, _ in SOCIAL:
+        v = env(f"SOCIAL_{k.upper()}")
+        if v:
+            out[k] = v if v.startswith(("@", "http")) or "." in v else "@" + v
+    return out
+
+
 def cities():
     return load_json(PIPE / "cities.json", [])
 

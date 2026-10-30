@@ -90,6 +90,7 @@ function cardPayload(c,H,ctx){const lv=peak12(H);const level=H.max72;const dom=H
   const later=level>=1&&!Object.values(lv).some(Boolean)&&first;const sc={...lv,...(later?{[first.k]:first.l}:{})};
   return{city:c.n,prov:c.pfa||'',xy:[c.x,c.y],pid:c.p,level,now:H.now,dom,domTxt,chips,verdict:vd,acts,scene:sc,
     nowTxt:H.wx&&H.wx[0]?`الان: ${fa(Math.round(H.wx[0].T))}° · رطوبت ${fa(Math.round(H.wx[0].rh))}٪ · باد ${fa(Math.round(H.wx[0].wind))} تا ${fa(Math.round(H.wx[0].gust))} km/h`:'',
+    social:ctx.social||{},
     caption:(later?`از ${ctx.at(first.s)}: `:'')+sceneCaption(sc),eta:ctx.eta||'',model:ctx.model||'',stamp:ctx.stamp||'',link:ctx.link||'',provLevels:ctx.provLevels||{},
     test:!!ctx.test,firstAt:first?ctx.at(first.s):''}}
 
@@ -104,3 +105,6 @@ function liveStamp(){const g=(new Date(LV.d.generated)-LV.t0)/36e5;const k=LV.cl
 function cardText(P){const E=['🟢','🟡','🟠','🔴'];
   if(P.view==='iran')return `وضعیت ایران · ${P.stamp}\n`+(P.top.length?P.top.slice(0,8).map(t=>`${E[t.l]} ${t.n}: ${HZN[t.k]||''}`).join('\n'):'هیچ شهری در خطر نیست.')+`\nپیش‌بینی مدل، نه هشدار رسمی.\n${P.link}`;
   return `${E[P.level]} ${P.city} · ${P.level?P.domTxt:'بدون هشدار'} (${LVLN[P.level]})\nچه کنم: ${P.verdict.v1}\n${P.acts[0]?P.acts[0].t+'\n':''}${P.eta?'کی: '+P.eta+'\n':''}پیش‌بینی مدل، نه هشدار رسمی.\n${P.link}`}
+// خط سوشال پایین کارت؛ فقط آن‌هایی که پر شده‌اند
+const SOCIALN={telegram:'تلگرام',instagram:'اینستاگرام',x:'X',bale:'بله'};
+function socialItems(s){return Object.keys(SOCIALN).filter(k=>s&&s[k]).map(k=>[SOCIALN[k],s[k]])}

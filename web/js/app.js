@@ -596,12 +596,12 @@ function sharePayload(name){
   const hz=LIVE?liveSnapshot(S.model):null;const H_=LIVE?hz.HZ:HZ;const stamp=LIVE?liveStamp():'نسخه‌ی نمایشی · داده‌ی ساختگی';
   const prov={};GEO.cities.forEach(c=>{if(H_[c.n])prov[c.p]=Math.max(prov[c.p]|0,H_[c.n].now)});
   if(name==='iran'){const top=GEO.cities.filter(c=>H_[c.n]).map(c=>({n:c.n,l:Math.max(...H_[c.n].L.all.slice(0,24)),k:H_[c.n].dom||(firstHz(H_[c.n])||{}).k})).filter(t=>t.l>=1).sort((a,b)=>b.l-a.l);
-    return{view:'iran',provLevels:prov,top,stamp,link:shareLink('')}}
+    return{view:'iran',provLevels:prov,top,stamp,link:shareLink(''),social:(LIVE&&LIVE.social)||{}}}
   const c=GEO.cities.find(q=>q.n===name);const H=H_[name];let etaS='',model,provEnd=-1;
   if(LIVE){const e=LV.eta(LV.byN[name],0,S.model);etaS=H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'';provEnd=hz.provEnd(c.p);model=S.model==='mix'?'اجماع '+fa(MODELS.length)+' مدل':MODELS.find(m=>m.id===S.model).name}
   else{const e=eta(c,S.t,S.model);etaS=H.max72>=2?etaText(e):'';model='داده‌ی ساختگی'}
   const at_=h=>{const k=clockOf((LIVE?0:HZT)+h);return `${k.day} ${k.hm}`};
-  return cardPayload({...c,pfa:provName(c)},H,{at:at_,provEnd,provLevels:prov,model,stamp,eta:etaS,link:shareLink(name)})}
+  return cardPayload({...c,pfa:provName(c)},H,{at:at_,provEnd,provLevels:prov,model,stamp,eta:etaS,link:shareLink(name),social:(LIVE&&LIVE.social)||{}})}
 const SH={P:null,fmt:'post',anim:true,raf:0,frame:null,name:''};
 async function openShare(name){SH.name=name;SH.P=sharePayload(name);const m=$('#shareModal');m.hidden=false;const cv=$('#shareCv'),cx=cv.getContext('2d');
   const size=()=>{const [w,h]=Card.SIZES[SH.fmt];cv.width=w;cv.height=h};size();await Card.fontsReady();

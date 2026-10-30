@@ -50,11 +50,11 @@ function base(){return (q.get('base')||location.href.replace(/card\.html.*$/,'')
 async function load(){const r=await fetch('data/latest.json',{cache:'no-cache'});if(!r.ok)throw new Error('داده در دسترس نیست');const D=await r.json();if(window.__EXTRA_CITY)D.cities.push(window.__EXTRA_CITY);LV.init(D);
   const snap=liveSnapshot('mix');const at=h=>{const k=LV.clock(h);return `${k.day} ${k.hm}`};
   if(view==='iran'){const top=LV.d.cities.map(c=>({n:c.n,l:Math.max(...snap.HZ[c.n].L.all.slice(0,24)),k:snap.HZ[c.n].dom||(firstHz(snap.HZ[c.n])||{}).k})).filter(t=>t.l>=1).sort((a,b)=>b.l-a.l);
-    P={view:'iran',provLevels:snap.provLevels,top,stamp:liveStamp(),link:base()};TEXT=cardText(P);return}
+    P={view:'iran',provLevels:snap.provLevels,top,stamp:liveStamp(),link:base(),social:LV.d.social||{}};TEXT=cardText(P);return}
   const name=q.get('city')||'تهران';const c=LV.byN[name];if(!c)throw new Error('شهر پیدا نشد: '+name);const g=GEO.cities.find(x=>x.n===name)||{x:(c.lon-GEO.LON0)*GEO.K*GEO.C,y:(GEO.LAT0-c.lat)*GEO.K};
   const H=snap.HZ[name];const e=LV.eta(c,0,'mix');
   P=cardPayload({...c,x:g.x,y:g.y},H,{at,provEnd:snap.provEnd(c.p),provLevels:snap.provLevels,model:'اجماع '+fa(LV.d.models.filter(m=>m.ok).length)+' مدل',
-    stamp:liveStamp(),eta:H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'',link:base()+'/?city='+encodeURIComponent(name),test:q.has('test')});
+    stamp:liveStamp(),eta:H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'',link:base()+'/?city='+encodeURIComponent(name),social:LV.d.social||{},test:q.has('test')});
   document.getElementById('dash').href='./?city='+encodeURIComponent(name);
   TEXT=cardText(P)}
 // برای رندر بی‌سر در GitHub Actions

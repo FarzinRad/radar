@@ -71,6 +71,10 @@ jobs:
           ALERT_MIN_LEVEL: ${{ vars.ALERT_MIN_LEVEL || '2' }}
           ALERT_MAX_MEDIA: ${{ vars.ALERT_MAX_MEDIA || '4' }}
           DAILY_REPORT: ${{ vars.DAILY_REPORT || '1' }}
+          SOCIAL_TELEGRAM: ${{ vars.SOCIAL_TELEGRAM }}
+          SOCIAL_INSTAGRAM: ${{ vars.SOCIAL_INSTAGRAM }}
+          SOCIAL_X: ${{ vars.SOCIAL_X }}
+          SOCIAL_BALE: ${{ vars.SOCIAL_BALE }}
           ALERT_HORIZON_H: ${{ vars.ALERT_HORIZON_H || '24' }}
         run: |
           if python -m radar.ingest; then echo "ok=1" >> "$GITHUB_OUTPUT"; else echo "ok=0" >> "$GITHUB_OUTPUT"; fi
