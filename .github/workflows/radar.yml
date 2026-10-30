@@ -71,6 +71,7 @@ jobs:
           ALERT_MIN_LEVEL: ${{ vars.ALERT_MIN_LEVEL || '2' }}
           ALERT_MAX_MEDIA: ${{ vars.ALERT_MAX_MEDIA || '4' }}
           DAILY_REPORT: ${{ vars.DAILY_REPORT || '1' }}
+          REPORT_EVERY_H: ${{ vars.REPORT_EVERY_H || '4' }}
           SOCIAL_TELEGRAM: ${{ vars.SOCIAL_TELEGRAM }}
           SOCIAL_INSTAGRAM: ${{ vars.SOCIAL_INSTAGRAM }}
           SOCIAL_X: ${{ vars.SOCIAL_X }}
@@ -211,5 +212,5 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_MODE: ${{ vars.IG_MODE || 'story' }}
-          DAILY_CHANNELS: ${{ vars.DAILY_CHANNELS || 'telegram,bale,ntfy' }}
+          REPORT_CHANNELS: ${{ vars.REPORT_CHANNELS || 'telegram,bale,ntfy,x,instagram' }}
         run: python -m radar.notify

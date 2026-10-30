@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -116,3 +116,32 @@ def test_unwatched_city_is_ignored_unless_test(tmp_state):
     assert alerts.detect(d, noon) == []
     t = alerts.detect(d, noon, test_city="رشت")
     assert t[0]["test"] and t[0]["text"].startswith("🧪")
+
+
+def test_periodic_report_every_few_hours_and_quiet_at_night(tmp_state, monkeypatch):
+    monkeypatch.setenv("DAILY_REPORT", "1")
+    monkeypatch.setenv("REPORT_EVERY_H", "4")
+    d = {"now": I0, "cities": [city("تهران", [0] * N)]}
+
+    def at_teh(h, m=0):     # ساعت تهران → UTC
+        return datetime(2026, 10, 22, 0, 0, tzinfo=timezone.utc) + timedelta(hours=h, minutes=m - 210)
+
+    def rep(t):
+        return [a for a in alerts.detect(d, t) if a["kind"] == "report"]
+    assert rep(at_teh(3)) == []                           # شب: نه
+    r = rep(at_teh(7))
+    assert r and "صبحگاهی" in r[0]["text"] and r[0]["view"] == "iran"
+    assert rep(at_teh(9)) == []                           # ۲ ساعت بعد: زود است
+    r = rep(at_teh(9, 50))                                # اجرای بعدی، حدود ۳ ساعت بعد
+    assert r and "گزارش وضعیت" in r[0]["text"]
+
+
+def test_messages_have_social_handles_not_site_link(tmp_state, monkeypatch):
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://example.github.io/radar")
+    noon = datetime(2026, 10, 22, 9, 0, tzinfo=timezone.utc)
+    d = {"now": I0, "cities": [city("تهران", lv_at(3))]}
+    a = alerts.detect(d, noon)[0]
+    assert "github.io" not in a["text"] and "github.io" not in a["short"]
+    assert "تلگرام" not in a["text"]                      # هیچ سوشالی تنظیم نشده → چیزی نمی‌آید
+    monkeypatch.setenv("SOCIAL_TELEGRAM", "mychannel")
+    assert alerts.social_line() == "تلگرام @mychannel"

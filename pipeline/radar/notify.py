@@ -49,7 +49,7 @@ def _media(a, name):
 def recipients(prefix, groups_env, a):
     """گروه‌های ثابت (Secret) + مشترکانی که همین شهر یا محل را دنبال می‌کنند."""
     S = _subs()
-    if a.get("kind") == "daily":
+    if a.get("kind") == "report":
         mine = [k for k, v in S.items() if v.get("daily", True)]
     else:
         mine = subs.recipients(S, a["city"])
@@ -231,7 +231,7 @@ def main(argv=None):
             name = ch.__name__.replace("x_post", "x")
             if only and name not in only:
                 continue
-            if a.get("kind") == "daily" and name not in cfg.env("DAILY_CHANNELS", "telegram,bale,ntfy"):
+            if a.get("kind") == "report" and name not in cfg.env("REPORT_CHANNELS", "telegram,bale,ntfy,x,instagram"):
                 continue
             try:
                 ch(a)

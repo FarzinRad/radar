@@ -102,9 +102,10 @@ function etaFmt(e,clk){if(!e)return'—';if(e.now)return'در حال وقوع';i
 function liveSnapshot(mid='mix'){const HZ={},prov={},pend={};LV.d.cities.forEach(c=>{const H=LV.cityHZ(c,mid,0);HZ[c.n]=H;prov[c.p]=Math.max(prov[c.p]|0,H.now);
     const w=windowOf(H.L.all,2);if(w)pend[c.p]=Math.max(pend[c.p]??-1,w.e)});return{HZ,provLevels:prov,provEnd:pid=>pend[pid]??-1}}
 function liveStamp(){const g=(new Date(LV.d.generated)-LV.t0)/36e5;const k=LV.clock(g);return `${k.day} ${k.hm} · وقت تهران`}
+const socialTxt=s=>{const t=socialItems(s).map(([n,h])=>n+' '+h).join(' · ');return t?'\n'+t:''};
 function cardText(P){const E=['🟢','🟡','🟠','🔴'];
-  if(P.view==='iran')return `وضعیت ایران · ${P.stamp}\n`+(P.top.length?P.top.slice(0,8).map(t=>`${E[t.l]} ${t.n}: ${HZN[t.k]||''}`).join('\n'):'هیچ شهری در خطر نیست.')+`\nپیش‌بینی مدل، نه هشدار رسمی.\n${P.link}`;
-  return `${E[P.level]} ${P.city} · ${P.level?P.domTxt:'بدون هشدار'} (${LVLN[P.level]})\nچه کنم: ${P.verdict.v1}\n${P.acts[0]?P.acts[0].t+'\n':''}${P.eta?'کی: '+P.eta+'\n':''}پیش‌بینی مدل، نه هشدار رسمی.\n${P.link}`}
+  if(P.view==='iran')return `وضعیت ایران · ${P.stamp}\n`+(P.top.length?P.top.slice(0,8).map(t=>`${E[t.l]} ${t.n}: ${HZN[t.k]||''}`).join('\n'):'هیچ شهری در خطر نیست.')+`\nپیش‌بینی مدل، نه هشدار رسمی.${socialTxt(P.social)}`;
+  return `${E[P.level]} ${P.city} · ${P.level?P.domTxt:'بدون هشدار'} (${LVLN[P.level]})\nچه کنم: ${P.verdict.v1}\n${P.acts[0]?P.acts[0].t+'\n':''}${P.eta?'کی: '+P.eta+'\n':''}پیش‌بینی مدل، نه هشدار رسمی.${socialTxt(P.social)}`}
 // خط سوشال پایین کارت؛ فقط آن‌هایی که پر شده‌اند
 const SOCIALN={telegram:'تلگرام',instagram:'اینستاگرام',x:'X',bale:'بله'};
 function socialItems(s){return Object.keys(SOCIALN).filter(k=>s&&s[k]).map(k=>[SOCIALN[k],s[k]])}

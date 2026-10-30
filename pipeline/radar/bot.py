@@ -19,10 +19,10 @@ from .notify import BOTS
 
 OFFSET = cfg.STATE_DIR / "bot_offset.json"
 COMMANDS = [("start", "شروع و راهنما"), ("now", "وضعیت الان شهرهای من"), ("list", "شهرهایی که دنبال می‌کنم"),
-            ("stop", "حذف یک شهر یا همه"), ("daily", "روشن/خاموش کردن گزارش صبحگاهی"), ("help", "راهنما")]
+            ("stop", "حذف یک شهر یا همه"), ("daily", "روشن/خاموش کردن گزارش دوره‌ای"), ("help", "راهنما")]
 HELP = ("اسم شهر یا روستایت را بنویس (مثلاً «رشت» یا «اسالم») تا هر وقت هوا آن‌جا خطرناک شد، "
         "کارت هشدار با «چه کنم» برایت بیاید.\n\n"
-        "/now وضعیت الان · /list شهرهای من · /stop رشت حذف یک شهر · /stop حذف همه · /daily گزارش صبحگاهی\n\n"
+        "/now وضعیت الان · /list شهرهای من · /stop رشت حذف یک شهر · /stop حذف همه · /daily گزارش دوره‌ای\n\n"
         "جواب ربات ممکن است تا چند دقیقه طول بکشد. پیش‌بینی مدل است، نه هشدار رسمی.")
 
 
@@ -106,7 +106,7 @@ def handle(bot, S, msg, ctx):
             bot.say(chat["id"], "همه‌ی اشتراک‌هایت حذف شد. هر وقت خواستی /start بزن.")
     elif cmd == "/daily":
         me["daily"] = not me.get("daily", True)
-        bot.say(chat["id"], "گزارش صبحگاهی " + ("روشن شد." if me["daily"] else "خاموش شد."))
+        bot.say(chat["id"], "گزارش دوره‌ای وضعیت کشور " + ("روشن شد." if me["daily"] else "خاموش شد."))
     elif cmd == "/now":
         names = [arg] if arg else [p["n"] for p in me["places"]]
         if not names:

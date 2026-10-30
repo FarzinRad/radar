@@ -4,7 +4,6 @@
 مگر سطح بالا برود؛ ساعات سکوت ۰۰ تا ۰۷ تهران فقط قرمز.
 """
 from datetime import datetime, timedelta
-from urllib.parse import quote
 
 from . import config as cfg, hazards as hz, subs
 from .timefmt import at, eta_text, fa, teh
@@ -17,14 +16,15 @@ def _min_level():
     return int(cfg.env("ALERT_MIN_LEVEL", "2"))
 
 
-def site_url():
-    return cfg.env("PUBLIC_BASE_URL", "").rstrip("/")
+def social_line():
+    """«تلگرام @a · اینستاگرام @b» از Variableهای SOCIAL_*؛ اگر هیچ‌کدام پر نیست، خالی."""
+    s = cfg.social()
+    return " · ".join(f"{name} {s[k]}" for k, name in cfg.SOCIAL if k in s)
 
 
 def message(a, now):
     """متن پیام به سبک PRD؛ کوتاه، با نوع خطر، مقدار، بازه و اقدام."""
     lv, dom = a["level"], a["dom"]
-    link = f"{site_url()}/?city={quote(a.get('near') or a['city'])}" if site_url() else ""
     if a["kind"] == "clear":
         lines = [f"✅ {a['city']} · رفع خطر", f"سطح از {hz.LVLN[a['prev']]} به {hz.LVLN[lv]} رسید. سامانه رد شده یا پیش‌بینی لغو شده."]
     else:
@@ -42,8 +42,8 @@ def message(a, now):
         lines.append(f"زمان رسیدن: {eta_text(a['eta'], now)}")
         lines.append(f"اجماع: {fa(a['agree'])} از {fa(a['members'])} مدل · Open-Meteo")
     lines.append("راهنمای عمومی است؛ هشدار رسمی را از سازمان هواشناسی بگیر.")
-    if link:
-        lines.append(link)
+    if social_line():
+        lines.append(social_line())
     return "\n".join(lines)
 
 
@@ -58,8 +58,8 @@ def short_message(a, now):
         if a.get("dom"):
             t += "\n" + hz.ACT[a["dom"]].get(max(1, a["level"]), "")
     t += "\nپیش‌بینی مدل، نه هشدار رسمی."
-    if site_url():
-        t += f"\n{site_url()}/?city={quote(a['city'])}"
+    if social_line():
+        t += "\n" + social_line()
     return t[:280]
 
 
@@ -126,7 +126,7 @@ def detect(data, now, test_city="", private=()):
         if kind != "test":
             state[skey] = st_new
     found.sort(key=lambda a: (-a["level"], a["city"]))
-    d = daily(data, now, state)
+    d = report(data, now, state)
     if d:
         found.append(d)
     cap = int(cfg.env("ALERT_MAX_MEDIA", "4"))       # سقف ویدیو در هر اجرا تا دقیقه‌های Actions تمام نشود
@@ -138,12 +138,22 @@ def detect(data, now, test_city="", private=()):
     return found
 
 
-def daily(data, now, state):
-    """گزارش صبحگاهی (۰۶ تا ۰۹ تهران، یک بار در روز): کارت وضعیت کشور + فهرست شهرهای در خطر."""
-    day = teh(now).date().isoformat()
-    if cfg.env("DAILY_REPORT", "1") != "1" or not 6 <= teh(now).hour < 9 or state.get("__daily") == day:
+def report(data, now, state):
+    """گزارش دوره‌ای کشور، جدا از هشدارها: کارت وضعیت ایران + فهرست شهرهای در خطر.
+
+    هر REPORT_EVERY_H ساعت (پیش‌فرض ۴؛ ۲۴ یعنی فقط صبح‌ها؛ ۰ یعنی خاموش). ساعت ۰۰ تا ۰۶ تهران نمی‌رود
+    و اولین گزارش بعد از ۰۶ «صبحگاهی» است. ۱٫۵ ساعت ارفاق دارد، چون اجراها حدود هر ۳ ساعت‌اند.
+    """
+    every = float(cfg.env("REPORT_EVERY_H", "4"))
+    t = teh(now)
+    if cfg.env("DAILY_REPORT", "1") != "1" or every <= 0 or t.hour < 6:
         return None
-    state["__daily"] = day
+    last = state.get("__report")
+    if last and (now - datetime.fromisoformat(last)).total_seconds() / 3600 < every - 1.5:
+        return None
+    morning = state.get("__daily") != t.date().isoformat()
+    state["__report"] = now.isoformat()
+    state["__daily"] = t.date().isoformat()
     i0 = data["now"]
     rows = []
     for c in data["cities"]:
@@ -153,20 +163,20 @@ def daily(data, now, state):
         if sm["peak"] >= 2:
             rows.append((sm["peak"], c["n"], sm["dom"]))
     rows.sort(key=lambda r: (-r[0], r[1]))
-    lines = [f"☀️ گزارش صبحگاهی رادار · {fa(teh(now).strftime('%H:%M'))}"]
+    lines = [f"{'☀️ گزارش صبحگاهی' if morning else '📡 گزارش وضعیت'} رادار · {fa(t.strftime('%H:%M'))}"]
     lines += [f"{hz.EMOJI[l]} {n}: {hz.HZN.get(k, '')}" for l, n, k in rows[:12]] or ["در ۲۴ ساعت آینده هیچ شهری نارنجی یا قرمز نیست."]
     if len(rows) > 12:
         lines.append(f"و {fa(len(rows) - 12)} شهر دیگر.")
     lines.append("پیش‌بینی مدل، نه هشدار رسمی.")
-    if site_url():
-        lines.append(site_url())
-    return {"city": "", "view": "iran", "kind": "daily", "test": False, "level": rows[0][0] if rows else 0, "dom": None,
+    if social_line():
+        lines.append(social_line())
+    return {"city": "", "view": "iran", "kind": "report", "test": False, "level": rows[0][0] if rows else 0, "dom": None,
             "media": True, "time": now.isoformat(), "text": "\n".join(lines), "short": "\n".join(lines)[:280]}
 
 
 def history(found):
     h = cfg.load_json(HIST, [])
-    h = ([{k: a[k] for k in ("city", "kind", "level", "dom", "time", "test")} for a in found if a["kind"] != "daily"] + h)[:40]
+    h = ([{k: a[k] for k in ("city", "kind", "level", "dom", "time", "test")} for a in found if a["kind"] != "report"] + h)[:40]
     cfg.save_json(HIST, h)
     return h
 
@@ -191,6 +201,4 @@ def status_text(c, i0, now):
         if lv >= 2:
             lines.append(f"زمان رسیدن: {eta_text(e, now)} · اجماع {fa(agree)} از {fa(mem)} مدل")
         lines.append(nowl)
-    if site_url() and not c.get("x"):
-        lines.append(f"{site_url()}/card.html?city={quote(c['n'])}")
     return "\n".join(lines)
