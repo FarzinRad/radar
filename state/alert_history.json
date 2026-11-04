@@ -1,6 +1,14 @@
 [
  {
   "city": "بندرعباس",
+  "kind": "clear",
+  "level": 0,
+  "dom": null,
+  "time": "2026-11-04T20:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "بندرعباس",
   "kind": "shift",
   "level": 2,
   "dom": "ltg",
