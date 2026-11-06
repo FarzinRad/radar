@@ -71,38 +71,58 @@ def render(items, seconds=8, fps=24, fmt="post", private=False):
                 browser = p.chromium.launch(channel="chrome")
             except Exception:
                 browser = p.chromium.launch()
+            def card(q, slug, init=None):
+                """یک کارت: PNG و MP4؛ برمی‌گرداند (png، mp4) یا None."""
+                page = browser.new_page(viewport={"width": w, "height": h})
+                try:
+                    if init:
+                        page.add_init_script(init)
+                    if base:
+                        q += f"&base={quote(base)}"
+                    page.goto(f"http://127.0.0.1:{port}/card.html?{q}&fmt={fmt}&headless=1")
+                    page.wait_for_function("window.__ready===true || !!window.__error", timeout=90000)
+                    err = page.evaluate("window.__error||''")
+                    if err:
+                        print(f"[render] {slug}: {err}", file=sys.stderr)
+                        return None
+                    png = media / f"{slug}.png"
+                    png.write_bytes(_b64(page.evaluate("__png()")))
+                    mp4 = None
+                    if ffmpeg:
+                        with tempfile.TemporaryDirectory() as td:
+                            for k in range(int(seconds * fps)):
+                                Path(td, f"f{k:04d}.jpg").write_bytes(_b64(page.evaluate(f"__frame({k / fps})")))
+                            mp4 = media / f"{slug}.mp4"
+                            subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", f"{td}/f%04d.jpg",
+                                            "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "24",
+                                            "-movflags", "+faststart", str(mp4)], check=True)
+                    return png.name, mp4.name if mp4 else None
+                finally:
+                    page.close()
+
             for i, a in enumerate(items):
                 if not a.get("media"):
                     continue
-                page = browser.new_page(viewport={"width": w, "height": h})
-                if private:     # داده‌ی محل اختصاصی مستقیم به صفحه تزریق می‌شود و جایی منتشر نمی‌شود
-                    page.add_init_script(f"window.__EXTRA_CITY={json.dumps(places.get(a['city']), ensure_ascii=False)}")
-                q = ("view=iran" if a.get("view") == "iran" else f"city={quote(a['city'])}") + f"&fmt={fmt}&headless=1"
+                slug = f"alert-{a['time'][:13].replace('-', '').replace('T', '')}-{i}"
+                if a.get("kind") == "album":        # پست کارتی: یک کارت برای هر شهر قرمز، با صحنه‌ی اوج ۷۲ ساعت
+                    a["album_media"] = []
+                    for j, rc in enumerate(a["cities"]):
+                        res = card(f"city={quote(rc['city'])}&peak=1", f"{slug}-{j}")
+                        if res:
+                            a["album_media"].append({"city": rc["city"], "png": res[0], "mp4": res[1]})
+                    if a["album_media"]:
+                        a["png"], a["mp4"] = a["album_media"][0]["png"], a["album_media"][0]["mp4"]
+                    print(f"[render] album: {len(a['album_media'])} cards")
+                    continue
+                q = "view=iran" if a.get("view") == "iran" else f"city={quote(a['city'])}"
                 if a.get("test"):
                     q += "&test=1"
-                if base:
-                    q += f"&base={quote(base)}"
-                page.goto(f"http://127.0.0.1:{port}/card.html?{q}")
-                page.wait_for_function("window.__ready===true || !!window.__error", timeout=90000)
-                err = page.evaluate("window.__error||''")
-                if err:
-                    print(f"[render] alert {i}: {err}", file=sys.stderr)
-                    page.close()
-                    continue
-                slug = f"alert-{a['time'][:13].replace('-', '').replace('T', '')}-{i}"
-                png = media / f"{slug}.png"
-                png.write_bytes(_b64(page.evaluate("__png()")))
-                a["png"] = png.name
-                if ffmpeg:
-                    with tempfile.TemporaryDirectory() as td:
-                        for k in range(int(seconds * fps)):
-                            Path(td, f"f{k:04d}.jpg").write_bytes(_b64(page.evaluate(f"__frame({k / fps})")))
-                        mp4 = media / f"{slug}.mp4"
-                        subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", f"{td}/f%04d.jpg",
-                                        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "24",
-                                        "-movflags", "+faststart", str(mp4)], check=True)
-                        a["mp4"] = mp4.name
-                page.close()
+                init = f"window.__EXTRA_CITY={json.dumps(places.get(a['city']), ensure_ascii=False)}" if private else None
+                res = card(q, slug, init)
+                if res:
+                    a["png"], a["mp4"] = res
+                    if not res[1]:
+                        a.pop("mp4")
                 print(f"[render] alert {i} → {a.get('png')} {a.get('mp4', '')}")
             browser.close()
     finally:

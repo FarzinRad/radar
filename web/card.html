@@ -53,7 +53,7 @@ async function load(){const r=await fetch('data/latest.json',{cache:'no-cache'})
     P={view:'iran',provLevels:snap.provLevels,top,stamp:liveStamp(),link:base(),social:LV.d.social||{}};TEXT=cardText(P);return}
   const name=q.get('city')||'تهران';const c=LV.byN[name];if(!c)throw new Error('شهر پیدا نشد: '+name);const g=GEO.cities.find(x=>x.n===name)||{x:(c.lon-GEO.LON0)*GEO.K*GEO.C,y:(GEO.LAT0-c.lat)*GEO.K};
   const H=snap.HZ[name];const e=LV.eta(c,0,'mix');
-  P=cardPayload({...c,x:g.x,y:g.y},H,{at,provEnd:snap.provEnd(c.p),provLevels:snap.provLevels,model:'اجماع '+fa(LV.d.models.filter(m=>m.ok).length)+' مدل',
+  P=cardPayload({...c,x:g.x,y:g.y},H,{peak:q.has('peak'),at,provEnd:snap.provEnd(c.p),provLevels:snap.provLevels,model:'اجماع '+fa(LV.d.models.filter(m=>m.ok).length)+' مدل',
     stamp:liveStamp(),eta:H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'',link:base()+'/?city='+encodeURIComponent(name),social:LV.d.social||{},test:q.has('test')});
   document.getElementById('dash').href='./?city='+encodeURIComponent(name);
   TEXT=cardText(P)}

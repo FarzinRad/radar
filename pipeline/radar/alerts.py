@@ -129,8 +129,11 @@ def detect(data, now, test_city="", private=()):
     d = report(data, now, state)
     if d:
         found.append(d)
+        alb = album(data, now)     # پست دوم، بعد از وضعیت کشور: کارت هر شهر قرمز
+        if alb:
+            found.append(alb)
     cap = int(cfg.env("ALERT_MAX_MEDIA", "4"))       # سقف ویدیو در هر اجرا تا دقیقه‌های Actions تمام نشود
-    for a in [x for x in found if not x.get("private")][cap:]:
+    for a in [x for x in found if not x.get("private") and x["kind"] not in ("report", "album")][cap:]:
         a["media"] = False
     for a in [x for x in found if x.get("private")][cap:]:
         a["media"] = False
@@ -174,9 +177,50 @@ def report(data, now, state):
             "media": True, "time": now.isoformat(), "text": "\n".join(lines), "short": "\n".join(lines)[:280]}
 
 
+def red_cities(data, horizon=72):
+    """شهرهایی که الان قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند، به ترتیب زودترین."""
+    i0 = data["now"]
+    out = []
+    for c in data["cities"]:
+        L = {k: hz.dec(v) for k, v in c["s"]["mix"]["L"].items()}
+        hrs = [h for h in range(i0, min(len(L["all"]), i0 + horizon)) if L["all"][h] >= 3]
+        if not hrs:
+            continue
+        h = hrs[0]
+        dom = next((k for k in hz.HAZARDS if L[k][h] >= 3), None)
+        out.append({"city": c["n"], "first": h - i0, "dom": dom, "m": c["m"]})
+    out.sort(key=lambda x: (x["first"], not x["m"], x["city"]))
+    return out
+
+
+def album(data, now):
+    """پست کارتی شهرهای قرمز: یک ویدیو برای هر شهر (حداکثر ALBUM_MAX، پیش‌فرض ۱۰)."""
+    reds = red_cities(data)
+    if not reds or cfg.env("ALBUM", "1") != "1":
+        return None
+    cap = int(cfg.env("ALBUM_MAX", "10"))
+    shown = reds[:cap]
+    lines = ["🔴 شهرهایی که قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند:"]
+    for r in shown:
+        when = "همین حالا" if r["first"] <= 0 else f"از {at(now, r['first'])}"
+        lines.append(f"• {r['city']}: {hz.HZN.get(r['dom'], '')}، {when}")
+    if len(reds) > cap:
+        lines.append(f"و {fa(len(reds) - cap)} شهر دیگر.")
+    lines.append("در هر ویدیو: چه می‌شود و چه کنم.")
+    lines.append("پیش‌بینی مدل، نه هشدار رسمی.")
+    if social_line():
+        lines.append(social_line())
+    text = "\n".join(lines)
+    short = f"🔴 قرمز تا ۷۲ ساعت آینده: {'، '.join(r['city'] for r in shown)}\nپیش‌بینی مدل، نه هشدار رسمی."
+    if social_line():
+        short += "\n" + social_line()
+    return {"city": "", "kind": "album", "test": False, "level": 3, "dom": shown[0]["dom"], "media": True,
+            "time": now.isoformat(), "cities": shown, "text": text, "short": short[:280]}
+
+
 def history(found):
     h = cfg.load_json(HIST, [])
-    h = ([{k: a[k] for k in ("city", "kind", "level", "dom", "time", "test")} for a in found if a["kind"] != "report"] + h)[:40]
+    h = ([{k: a[k] for k in ("city", "kind", "level", "dom", "time", "test")} for a in found if a["kind"] not in ("report", "album")] + h)[:40]
     cfg.save_json(HIST, h)
     return h
 

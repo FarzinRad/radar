@@ -6,6 +6,7 @@
     python -m radar.notify --whoami        # شناسه‌ی چت‌هایی که اخیراً به ربات پیام داده‌اند (برای TELEGRAM_CHAT_IDS)
 """
 import argparse
+import json
 import sys
 import time
 
@@ -49,7 +50,7 @@ def _media(a, name):
 def recipients(prefix, groups_env, a):
     """گروه‌های ثابت (Secret) + مشترکانی که همین شهر یا محل را دنبال می‌کنند."""
     S = _subs()
-    if a.get("kind") == "report":
+    if a.get("kind") in ("report", "album"):
         mine = [k for k, v in S.items() if v.get("daily", True)]
     else:
         mine = subs.recipients(S, a["city"])
@@ -75,6 +76,42 @@ def _post(url, method, data, field=None, fname=None, key=None, a=None):
     return requests.post(f"{url}/{method}", data=data, timeout=60)
 
 
+def send_album(name, url, chat, a):
+    """همه‌ی کارت‌ها در یک پیام (آلبوم تلگرام، تا ۱۰ تا در هر پیام)؛ متن زیر اولی."""
+    items = a.get("album_media") or []
+    sent_all = True
+    for start in range(0, len(items), 10):
+        chunk = items[start:start + 10]
+        media, files, handles = [], {}, []
+        for j, it in enumerate(chunk):
+            kind, fname = ("video", it["mp4"]) if it.get("mp4") else ("photo", it["png"])
+            key = (name, "album", fname)
+            ref = _FILE_IDS.get(key)
+            if not ref:
+                handles.append(open(_media(a, fname), "rb"))
+                files[f"f{j}"] = handles[-1]
+                ref = f"attach://f{j}"
+            m = {"type": kind, "media": ref}
+            if j == 0 and start == 0:
+                m["caption"] = a["text"][:1024]
+            media.append(m)
+        try:
+            r = requests.post(f"{url}/sendMediaGroup", data={"chat_id": chat, "media": json.dumps(media, ensure_ascii=False)},
+                              files=files or None, timeout=300)
+        finally:
+            for f in handles:
+                f.close()
+        ok = r.ok and r.json().get("ok")
+        if ok:          # file_id برای چت‌های بعدی، بدون آپلود دوباره
+            for it, msg in zip(chunk, r.json()["result"]):
+                obj = msg.get("video") or (msg.get("photo") or [{}])[-1]
+                fname = it["mp4"] if it.get("mp4") else it["png"]
+                if obj.get("file_id"):
+                    _FILE_IDS[(name, "album", fname)] = obj["file_id"]
+        sent_all = sent_all and ok
+    return sent_all
+
+
 def bot_send(name, a):
     prefix, api, tok_env, groups_env = BOTS[name]
     tok = cfg.env(tok_env)
@@ -86,6 +123,20 @@ def bot_send(name, a):
     ok = 0
     for chat in chats:
         sent = False
+        if a.get("kind") == "album" and a.get("album_media"):
+            sent = send_album(name, url, chat, a)
+            if not sent:        # اگر آلبوم پشتیبانی نشد (مثلاً بله)، کارت‌ها تک‌تک
+                for it in a["album_media"]:
+                    one = {**a, "png": it["png"], "mp4": it.get("mp4"), "kind": "card"}
+                    cap1 = next((ln for ln in a["text"].split("\n") if ln.startswith(f"• {it['city']}:")), it["city"])
+                    for method, field, fname in (("sendVideo", "video", one.get("mp4")), ("sendPhoto", "photo", one["png"])):
+                        if fname and _post(url, method, {"chat_id": chat, "caption": cap1}, field, fname,
+                                           (name, method, fname), one).ok:
+                            break
+                sent = True
+            ok += bool(sent)
+            time.sleep(.06)
+            continue
         for method, field, fname in (("sendAnimation", "animation", a.get("mp4")), ("sendVideo", "video", a.get("mp4")),
                                      ("sendPhoto", "photo", a.get("png"))):
             if not fname or sent:
@@ -134,16 +185,20 @@ def x_post(a):
     from requests_oauthlib import OAuth1
     auth = OAuth1(*keys)
     body = {"text": a.get("short") or a["text"][:280]}
-    if a.get("png"):
-        with open(MEDIA / a["png"], "rb") as f:
+    pngs = [it["png"] for it in a.get("album_media", [])][:4] or ([a["png"]] if a.get("png") else [])   # X: حداکثر ۴ عکس
+    ids = []
+    for png in pngs:
+        with open(MEDIA / png, "rb") as f:
             r = requests.post("https://api.x.com/2/media/upload", auth=auth, files={"media": f},
                               data={"media_category": "tweet_image"}, timeout=120)
         if r.ok:
             mid = (r.json().get("data") or {}).get("id") or r.json().get("media_id_string")
             if mid:
-                body["media"] = {"media_ids": [str(mid)]}
+                ids.append(str(mid))
         else:
             print(f"[notify] X media upload → {r.status_code} {r.text[:200]}", file=sys.stderr)
+    if ids:
+        body["media"] = {"media_ids": ids}
     r = requests.post("https://api.x.com/2/tweets", auth=auth, json=body, timeout=60)
     print(f"[notify] X: {r.status_code} {'' if r.ok else r.text[:200]}")
 
@@ -160,6 +215,53 @@ def _wait_public(url, tries=24):
     return False
 
 
+def _ig_wait(g, cid, tok, tries=40):
+    """کانتینر ویدیو باید اول پردازش شود."""
+    for _ in range(tries):
+        st = requests.get(f"{g}/{cid}", params={"fields": "status_code", "access_token": tok}, timeout=30).json().get("status_code")
+        if st in ("FINISHED", None, "ERROR", "EXPIRED"):
+            return st in ("FINISHED", None)
+        time.sleep(8)
+    return False
+
+
+def instagram_album(a, g, ig, tok):
+    """پست کارتی (carousel): هر شهر قرمز یک اسلاید ویدیو، تا ۱۰ اسلاید."""
+    items = (a.get("album_media") or [])[:10]
+    urls = [(_public(it["mp4"]), "video") if it.get("mp4") else (_public(it["png"]), "image") for it in items]
+    if not urls or not _wait_public(urls[-1][0]):
+        print("[notify] instagram album: media not public yet; skipped", file=sys.stderr)
+        return
+    cap = a["text"][:2200]
+    if len(urls) == 1:          # carousel دست‌کم ۲ اسلاید می‌خواهد
+        u, t = urls[0]
+        p = {"access_token": tok, "caption": cap, **({"media_type": "REELS", "video_url": u} if t == "video" else {"image_url": u})}
+        r = requests.post(f"{g}/{ig}/media", data=p, timeout=60)
+        cid = r.json().get("id") if r.ok else None
+    else:
+        kids = []
+        for u, t in urls:
+            p = {"access_token": tok, "is_carousel_item": "true",
+                 **({"media_type": "VIDEO", "video_url": u} if t == "video" else {"image_url": u})}
+            r = requests.post(f"{g}/{ig}/media", data=p, timeout=60)
+            if r.ok:
+                kids.append(r.json()["id"])
+            else:
+                print(f"[notify] instagram slide → {r.status_code} {r.text[:200]}", file=sys.stderr)
+        kids = [k for k in kids if _ig_wait(g, k, tok)]
+        if len(kids) < 2:
+            print("[notify] instagram album: not enough slides", file=sys.stderr)
+            return
+        r = requests.post(f"{g}/{ig}/media", data={"access_token": tok, "media_type": "CAROUSEL",
+                                                    "children": ",".join(kids), "caption": cap}, timeout=60)
+        cid = r.json().get("id") if r.ok else None
+    if not cid or not _ig_wait(g, cid, tok):
+        print(f"[notify] instagram album container failed: {r.status_code} {r.text[:200]}", file=sys.stderr)
+        return
+    r = requests.post(f"{g}/{ig}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
+    print(f"[notify] instagram album ({len(urls)}): {r.status_code} {'' if r.ok else r.text[:300]}")
+
+
 def instagram(a):
     ig, tok = cfg.env("IG_USER_ID"), cfg.env("IG_ACCESS_TOKEN")
     if not (ig and tok and cfg.env("PUBLIC_BASE_URL")):
@@ -167,6 +269,8 @@ def instagram(a):
     # توکن «ورود با اینستاگرام» (بدون صفحه‌ی فیسبوک) با IG شروع می‌شود و آدرس API خودش را دارد
     host = cfg.env("IG_API_HOST") or ("graph.instagram.com" if tok.startswith("IG") else "graph.facebook.com")
     g = f"https://{host}/{cfg.env('IG_GRAPH_VERSION', 'v23.0')}"
+    if a.get("kind") == "album":
+        return instagram_album(a, g, ig, tok)
     modes = [m.strip() for m in cfg.env("IG_MODE", "story").split(",") if m.strip()]
     vid, img = _public(a.get("mp4")), _public(a.get("png"))
     if not (vid or img) or not _wait_public(vid or img):
@@ -185,11 +289,7 @@ def instagram(a):
             print(f"[notify] instagram {mode} container → {r.status_code} {r.text[:300]}", file=sys.stderr)
             continue
         cid = r.json()["id"]
-        for _ in range(30):         # ویدیو باید اول پردازش شود
-            s = requests.get(f"{g}/{cid}", params={"fields": "status_code", "access_token": tok}, timeout=30).json()
-            if s.get("status_code") in ("FINISHED", None) or s.get("status_code") == "ERROR":
-                break
-            time.sleep(8)
+        _ig_wait(g, cid, tok)
         r = requests.post(f"{g}/{ig}/media_publish", data={"creation_id": cid, "access_token": tok}, timeout=60)
         print(f"[notify] instagram {mode}: {r.status_code} {'' if r.ok else r.text[:300]}")
 
@@ -233,7 +333,7 @@ def main(argv=None):
             name = ch.__name__.replace("x_post", "x")
             if only and name not in only:
                 continue
-            if a.get("kind") == "report" and name not in cfg.env("REPORT_CHANNELS", "telegram,bale,ntfy,x,instagram"):
+            if a.get("kind") in ("report", "album") and name not in cfg.env("REPORT_CHANNELS", "telegram,bale,ntfy,x,instagram"):
                 continue
             try:
                 ch(a)

@@ -72,6 +72,8 @@ jobs:
           ALERT_MAX_MEDIA: ${{ vars.ALERT_MAX_MEDIA || '4' }}
           DAILY_REPORT: ${{ vars.DAILY_REPORT || '1' }}
           REPORT_EVERY_H: ${{ vars.REPORT_EVERY_H || '4' }}
+          ALBUM: ${{ vars.ALBUM || '1' }}
+          ALBUM_MAX: ${{ vars.ALBUM_MAX || '10' }}
           SOCIAL_TELEGRAM: ${{ vars.SOCIAL_TELEGRAM }}
           SOCIAL_INSTAGRAM: ${{ vars.SOCIAL_INSTAGRAM }}
           SOCIAL_X: ${{ vars.SOCIAL_X }}
@@ -96,7 +98,7 @@ jobs:
 
       - name: ساخت عکس و ویدیوی کارت هشدار
         id: render
-        timeout-minutes: 10
+        timeout-minutes: 15
         continue-on-error: true      # اگر ویدیو نشد، داده‌ی تازه باز هم منتشر می‌شود
         working-directory: pipeline
         run: |
@@ -184,7 +186,7 @@ jobs:
     needs: [build, deploy]
     if: needs.build.outputs.alerts != '0'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30         # اینستاگرام هر ویدیوی پست کارتی را جدا پردازش می‌کند
     steps:
       - uses: actions/checkout@v4
         with:

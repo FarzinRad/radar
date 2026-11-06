@@ -106,7 +106,7 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
   let ty=y+58;font(c,32,800);c.fillStyle=AMBER;rtl(c,'چه کنم؟',W-pad-32,ty);ty+=56;
   font(c,story?42:38,800);c.fillStyle=INK;ty=wrap(c,P.verdict.v1,W-pad-32,ty,sw-64,story?56:50,2);
   font(c,story?30:27,500);c.fillStyle='#C9DCE6';
-  const lines=[];if(P.verdict.v2)lines.push(['',P.verdict.v2]);P.acts.slice(0,story?4:2).forEach(a=>lines.push([a.k,a.t]));if(P.verdict.mnt&&story)lines.push(['','⛰ '+P.verdict.mnt]);if(P.nowTxt)lines.push(['',P.nowTxt]);
+  const lines=[];if(P.verdict.v2)lines.push(['',P.verdict.v2]);if(P.verdict.mnt&&P.level>=2)lines.push(['','⛰ '+P.verdict.mnt]);P.acts.slice(0,story?4:(P.verdict.mnt&&P.level>=2?1:2)).forEach(a=>lines.push([a.k,a.t]));if(P.nowTxt)lines.push(['',P.nowTxt]);
   for(const [k,t] of lines){if(ty>by0+bh-70)break;ty+=6;if(k)icon(c,k,W-pad-62,ty-24,26,LVCOL[Math.max(1,P.level)]);ty=wrap(c,t,W-pad-(k?76:32),ty,sw-(k?108:64),story?42:38,2)}
   y+=bh+(story?64:44);
   // کی؟ و پاورقی

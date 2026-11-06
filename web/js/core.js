@@ -81,13 +81,15 @@ const LV={d:null,byN:{},init(d){this.d=d;this.t0=new Date(d.t0);this.i0=d.now;th
 
 /* ---------- محتوای کارت هشدار ---------- */
 // H: شیء HZ شهر از اکنون؛ ctx: {at, provEnd, provLevels, model, stamp, eta, link, test}
-function cardPayload(c,H,ctx){const lv=peak12(H);const level=H.max72;const dom=H.dom||(firstHz(H)||{}).k||null;
+function peak72(H){const o={};for(const k of HZK)o[k]=Math.max(...H.L[k]);return o}
+// ctx.peak: صحنه اوجِ کل ۷۲ ساعت را نشان می‌دهد (پست شهرهای قرمز)، نه فقط ۱۲ ساعت آینده
+function cardPayload(c,H,ctx){const lv=ctx.peak?peak72(H):peak12(H);const level=H.max72;const dom=H.dom||(firstHz(H)||{}).k||null;
   const chips=HZK.filter(k=>Math.max(...H.L[k])>=1).map(k=>{const m=Math.max(...H.L[k]);const v=hzValue(H,k);
     const txt=k==='rain'?`${fa(Math.round(v))} میلی‌متر`:k==='snow'?`${fa(Math.round(v))} سانتی‌متر`:k==='wind'?`${fa(Math.round(v))} km/h`:k==='dust'?`PM10 ${fa(Math.round(v))}`:'';return{k,l:m,txt}}).sort((a,b)=>b.l-a.l);
   const vd=verdictOf(H,ctx.at,ctx.provEnd??-1);const acts=actionsOf(H);
   const domTxt=dom?HZN[dom]:'هوای آرام';const first=firstHz(H);
   // اگر خطر بعد از ۱۲ ساعت آینده است، صحنه اوجِ همان خطر را نشان می‌دهد
-  const later=level>=1&&!Object.values(lv).some(Boolean)&&first;const sc={...lv,...(later?{[first.k]:first.l}:{})};
+  const later=ctx.peak?(first&&first.s>=12?first:null):level>=1&&!Object.values(lv).some(Boolean)&&first;const sc=ctx.peak?lv:{...lv,...(later?{[first.k]:first.l}:{})};
   return{city:c.n,prov:c.pfa||'',xy:[c.x,c.y],pid:c.p,level,now:H.now,dom,domTxt,chips,verdict:vd,acts,scene:sc,
     nowTxt:H.wx&&H.wx[0]?`الان: ${fa(Math.round(H.wx[0].T))}° · رطوبت ${fa(Math.round(H.wx[0].rh))}٪ · باد ${fa(Math.round(H.wx[0].wind))} تا ${fa(Math.round(H.wx[0].gust))} km/h`:'',
     social:ctx.social||{},
