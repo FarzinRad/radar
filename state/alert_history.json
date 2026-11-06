@@ -4,6 +4,22 @@
   "kind": "shift",
   "level": 2,
   "dom": "ltg",
+  "time": "2026-11-06T14:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "کرمانشاه",
+  "kind": "up",
+  "level": 2,
+  "dom": "rain",
+  "time": "2026-11-06T14:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "اهواز",
+  "kind": "shift",
+  "level": 2,
+  "dom": "ltg",
   "time": "2026-11-06T11:00:00+00:00",
   "test": false
  },
