@@ -83,7 +83,7 @@ def handle(bot, S, msg, ctx):
             bot.say(chat["id"], "این ربات خصوصی است. لینک دعوت را از کسی که تو را دعوت کرده بگیر.")
             return
         S.setdefault(key, {"places": [], "daily": True, "since": ctx["now"].isoformat()[:10]})
-        bot.say(chat["id"], "سلام! من رادار هستم و وقتی هوای شهرت خطرناک شود خبرت می‌کنم.\n\n" + HELP, kb=True)
+        bot.say(chat["id"], f"سلام! من {cfg.brand()} هستم و وقتی هوای شهرت خطرناک شود خبرت می‌کنم.\n\n" + HELP, kb=True)
         return
     if not me:
         if invite:

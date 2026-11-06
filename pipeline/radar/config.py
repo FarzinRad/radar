@@ -62,6 +62,11 @@ def save_json(path, obj, compact=False):
 SOCIAL = [("telegram", "تلگرام"), ("instagram", "اینستاگرام"), ("x", "X"), ("bale", "بله")]
 
 
+def brand():
+    """اسمی که روی کارت‌ها، پیام‌ها و سایت می‌آید (Variable به نام BRAND_NAME)."""
+    return env("BRAND_NAME", "النینو ایران")
+
+
 def social():
     """آدرس‌های سوشال روی کارت‌ها، از Variableهای SOCIAL_TELEGRAM و ... ؛ خالی‌ها حذف می‌شوند."""
     out = {}

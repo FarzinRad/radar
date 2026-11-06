@@ -92,7 +92,7 @@ function cardPayload(c,H,ctx){const lv=ctx.peak?peak72(H):peak12(H);const level=
   const later=ctx.peak?(first&&first.s>=12?first:null):level>=1&&!Object.values(lv).some(Boolean)&&first;const sc=ctx.peak?lv:{...lv,...(later?{[first.k]:first.l}:{})};
   return{city:c.n,prov:c.pfa||'',xy:[c.x,c.y],pid:c.p,level,now:H.now,dom,domTxt,chips,verdict:vd,acts,scene:sc,
     nowTxt:H.wx&&H.wx[0]?`الان: ${fa(Math.round(H.wx[0].T))}° · رطوبت ${fa(Math.round(H.wx[0].rh))}٪ · باد ${fa(Math.round(H.wx[0].wind))} تا ${fa(Math.round(H.wx[0].gust))} km/h`:'',
-    social:ctx.social||{},
+    social:ctx.social||{},brand:ctx.brand||'',
     caption:(later?`از ${ctx.at(first.s)}: `:'')+sceneCaption(sc),eta:ctx.eta||'',model:ctx.model||'',stamp:ctx.stamp||'',link:ctx.link||'',provLevels:ctx.provLevels||{},
     test:!!ctx.test,firstAt:first?ctx.at(first.s):''}}
 

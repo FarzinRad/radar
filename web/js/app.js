@@ -195,7 +195,7 @@ function heavy(force){ // levels, panels, alerts — throttled
   S.levels=lv;renderPanels()}
 function pushAlert(c,l){const e=eta(c,S.t,S.model);const ck=clockOf(S.t);const st=nearestStorm(c);
   const H=HZ[c.n];const msg=`${c.n} · ${LVLN[l]} · ${H&&H.dom?HZN[H.dom]:(STORMS.find(s=>s.id===st)||{}).kind||''}`;const sub=`ntfy · radar-alerts · ${st} · ${etaText(e)}`;
-  const box=$('#toasts');const t=document.createElement('div');t.className='toast l'+l;t.innerHTML=`<span class="src">هشدار · ${st||'رادار'}</span><div>${msg}</div><small>${etaText(e)}</small>`;box.prepend(t);
+  const box=$('#toasts');const t=document.createElement('div');t.className='toast l'+l;t.innerHTML=`<span class="src">هشدار · ${st||'هشدار'}</span><div>${msg}</div><small>${etaText(e)}</small>`;box.prepend(t);
   while(box.children.length>2)box.lastChild.remove();setTimeout(()=>t.remove(),5000);
   S.alerts.unshift(`${ck.day} ${ck.hm} — ${msg} — ${etaText(e)}`);S.alerts=S.alerts.slice(0,6);
   $('#ticker').innerHTML=`<div>${S.alerts.slice(0,3).join('   |   ')}</div>`}
@@ -596,12 +596,12 @@ function sharePayload(name){
   const hz=LIVE?liveSnapshot(S.model):null;const H_=LIVE?hz.HZ:HZ;const stamp=LIVE?liveStamp():'نسخه‌ی نمایشی · داده‌ی ساختگی';
   const prov={};GEO.cities.forEach(c=>{if(H_[c.n])prov[c.p]=Math.max(prov[c.p]|0,H_[c.n].now)});
   if(name==='iran'){const top=GEO.cities.filter(c=>H_[c.n]).map(c=>({n:c.n,l:Math.max(...H_[c.n].L.all.slice(0,24)),k:H_[c.n].dom||(firstHz(H_[c.n])||{}).k})).filter(t=>t.l>=1).sort((a,b)=>b.l-a.l);
-    return{view:'iran',provLevels:prov,top,stamp,link:shareLink(''),social:(LIVE&&LIVE.social)||{}}}
+    return{view:'iran',provLevels:prov,top,stamp,link:shareLink(''),social:(LIVE&&LIVE.social)||{},brand:LIVE&&LIVE.brand}}
   const c=GEO.cities.find(q=>q.n===name);const H=H_[name];let etaS='',model,provEnd=-1;
   if(LIVE){const e=LV.eta(LV.byN[name],0,S.model);etaS=H.max72>=2?etaFmt(e,LV.clock.bind(LV)):'';provEnd=hz.provEnd(c.p);model=S.model==='mix'?'اجماع '+fa(MODELS.length)+' مدل':MODELS.find(m=>m.id===S.model).name}
   else{const e=eta(c,S.t,S.model);etaS=H.max72>=2?etaText(e):'';model='داده‌ی ساختگی'}
   const at_=h=>{const k=clockOf((LIVE?0:HZT)+h);return `${k.day} ${k.hm}`};
-  return cardPayload({...c,pfa:provName(c)},H,{at:at_,provEnd,provLevels:prov,model,stamp,eta:etaS,link:shareLink(name),social:(LIVE&&LIVE.social)||{}})}
+  return cardPayload({...c,pfa:provName(c)},H,{at:at_,provEnd,provLevels:prov,model,stamp,eta:etaS,link:shareLink(name),social:(LIVE&&LIVE.social)||{},brand:LIVE&&LIVE.brand})}
 const SH={P:null,fmt:'post',anim:true,raf:0,frame:null,name:''};
 async function openShare(name){SH.name=name;SH.P=sharePayload(name);const m=$('#shareModal');m.hidden=false;const cv=$('#shareCv'),cx=cv.getContext('2d');
   const size=()=>{const [w,h]=Card.SIZES[SH.fmt];cv.width=w;cv.height=h};size();await Card.fontsReady();
@@ -624,7 +624,7 @@ $('#shareCopy').onclick=async()=>{try{await navigator.clipboard.writeText(cardTe
 // کارنامه‌ی واقعی: خانه‌ها آرایه‌اند ([جمع، n] یا [hits، miss، fa، n])
 function scoreDB(sc){const db={};for(const m in sc.db){db[m]={};for(const v in sc.db[m]){db[m][v]={};for(const g in sc.db[m][v])db[m][v][g]=sc.db[m][v][g].map(w=>{const o={};for(const L in w){const a=w[L];o[L]=a.length===4?{hits:a[0],miss:a[1],fa:a[2],n:a[3]}:{sum:a[0],n:a[1]}}return o})}}return db}
 /* ---------- start ---------- */
-function start(){renderCrumbs();setStamp();if(LIVE)$('#spagBtn').style.display='none';
+function start(){renderCrumbs();setStamp();if(LIVE&&LIVE.brand){document.title=LIVE.brand;document.querySelector('.brand b').textContent=LIVE.brand}if(LIVE)$('#spagBtn').style.display='none';
   const q=new URLSearchParams(location.search);if(q.get('model')&&[...MODELS,MIX].some(m=>m.id===q.get('model')))S.model=q.get('model');if(q.get('t'))S.t=clamp(+q.get('t')||0,TMIN,TMAX);
   if(STORMS.length){const s=stormAt(STORMS[0],0,'mix');const [cx,cy]=P(s[0],s[1]);setVB(fit({x:cx-110,y:cy-75,w:220,h:150},0))}else setVB(fit(REGION,0));
   setModel(S.model);tick(true);hudBL();hudTL();initTicker();

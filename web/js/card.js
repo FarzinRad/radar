@@ -73,7 +73,7 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
   const col=LVCOL[P.level];const glow=c.createRadialGradient(W*.8,0,0,W*.8,0,W);glow.addColorStop(0,col+'33');glow.addColorStop(1,'transparent');c.fillStyle=glow;c.fillRect(0,0,W,H);
   let y=story?150:96;
   // سربرگ
-  c.fillStyle=INK;font(c,46,800);rtl(c,'رادار',W-pad,y);const bw=c.measureText('رادار').width;c.fillStyle=DIM;font(c,28,500);rtl(c,'· هشدار هواشناسی',W-pad-bw-14,y);
+  c.fillStyle=INK;font(c,46,800);const BR=P.brand||'النینو ایران';rtl(c,BR,W-pad,y);const bw=c.measureText(BR).width;c.fillStyle=DIM;font(c,28,500);rtl(c,'· هشدار هواشناسی',W-pad-bw-14,y);
   font(c,24,500);c.fillStyle=DIM;ltr(c,P.stamp,pad,y);
   if(P.test){const sx=pad+c.measureText(P.stamp).width+18;font(c,22,700);const tw=c.measureText('آزمایشی').width+28;c.fillStyle=AMBER;rr(c,sx,y-30,tw,40,20);c.fill();c.fillStyle='#1A1205';rtl(c,'آزمایشی',sx+tw-14,y-2)}
   y+=story?140:118;
@@ -118,7 +118,7 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
 
 /* ---------- کارت وضعیت کشور (گزارش صبحگاهی) ---------- */
 function drawIran(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56;c.save();c.setTransform(1,0,0,1,0,0);c.fillStyle=BG;c.fillRect(0,0,W,H);
-  let y=96;c.fillStyle=INK;font(c,46,800);rtl(c,'رادار · وضعیت ایران',W-pad,y);font(c,24,500);c.fillStyle=DIM;ltr(c,P.stamp,pad,y);
+  let y=96;c.fillStyle=INK;font(c,46,800);rtl(c,(P.brand||'النینو ایران')+' · وضعیت ایران',W-pad,y);font(c,24,500);c.fillStyle=DIM;ltr(c,P.stamp,pad,y);
   y+=40;const mh=fmt==='story'?900:640;c.fillStyle=PANEL;rr(c,pad,y,W-2*pad,mh,26);c.fill();miniMap(c,pad+16,y+16,W-2*pad-32,mh-32,{...P,xy:null,pid:null,level:0},T,true);
   y+=mh+70;font(c,30,800);c.fillStyle=INK;rtl(c,P.top.length?'شهرهای در خطر، ۲۴ ساعت آینده':'هیچ شهری در خطر نیست.',W-pad,y);y+=24;
   P.top.slice(0,fmt==='story'?10:6).forEach((t,i)=>{const yy=y+i*62;c.fillStyle=LVCOL[t.l];rr(c,W-pad-20,yy+14,20,20,5);c.fill();font(c,30,700);c.fillStyle=INK;rtl(c,t.n,W-pad-40,yy+36);

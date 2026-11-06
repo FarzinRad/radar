@@ -166,7 +166,7 @@ def report(data, now, state):
         if sm["peak"] >= 2:
             rows.append((sm["peak"], c["n"], sm["dom"]))
     rows.sort(key=lambda r: (-r[0], r[1]))
-    lines = [f"{'☀️ گزارش صبحگاهی' if morning else '📡 گزارش وضعیت'} رادار · {fa(t.strftime('%H:%M'))}"]
+    lines = [f"{'☀️ گزارش صبحگاهی' if morning else '📡 گزارش وضعیت'} {cfg.brand()} · {fa(t.strftime('%H:%M'))}"]
     lines += [f"{hz.EMOJI[l]} {n}: {hz.HZN.get(k, '')}" for l, n, k in rows[:12]] or ["در ۲۴ ساعت آینده هیچ شهری نارنجی یا قرمز نیست."]
     if len(rows) > 12:
         lines.append(f"و {fa(len(rows) - 12)} شهر دیگر.")
