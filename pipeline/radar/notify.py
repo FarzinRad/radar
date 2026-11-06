@@ -164,7 +164,9 @@ def instagram(a):
     ig, tok = cfg.env("IG_USER_ID"), cfg.env("IG_ACCESS_TOKEN")
     if not (ig and tok and cfg.env("PUBLIC_BASE_URL")):
         return
-    g = f"https://graph.facebook.com/{cfg.env('IG_GRAPH_VERSION', 'v23.0')}"
+    # توکن «ورود با اینستاگرام» (بدون صفحه‌ی فیسبوک) با IG شروع می‌شود و آدرس API خودش را دارد
+    host = cfg.env("IG_API_HOST") or ("graph.instagram.com" if tok.startswith("IG") else "graph.facebook.com")
+    g = f"https://{host}/{cfg.env('IG_GRAPH_VERSION', 'v23.0')}"
     modes = [m.strip() for m in cfg.env("IG_MODE", "story").split(",") if m.strip()]
     vid, img = _public(a.get("mp4")), _public(a.get("png"))
     if not (vid or img) or not _wait_public(vid or img):
