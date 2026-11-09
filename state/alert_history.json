@@ -4,6 +4,14 @@
   "kind": "shift",
   "level": 2,
   "dom": "dust",
+  "time": "2026-11-09T09:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "اهواز",
+  "kind": "shift",
+  "level": 2,
+  "dom": "dust",
   "time": "2026-11-09T06:00:00+00:00",
   "test": false
  },
