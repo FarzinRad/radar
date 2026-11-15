@@ -1,6 +1,14 @@
 [
  {
   "city": "رشت",
+  "kind": "clear",
+  "level": 1,
+  "dom": "rain",
+  "time": "2026-11-15T13:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "رشت",
   "kind": "shift",
   "level": 2,
   "dom": "rain",
@@ -309,14 +317,6 @@
   "level": 3,
   "dom": "dust",
   "time": "2026-10-24T00:00:00+00:00",
-  "test": false
- },
- {
-  "city": "اهواز",
-  "kind": "shift",
-  "level": 3,
-  "dom": "dust",
-  "time": "2026-10-23T21:00:00+00:00",
   "test": false
  }
 ]
