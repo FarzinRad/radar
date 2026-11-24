@@ -1,6 +1,14 @@
 [
  {
   "city": "تبریز",
+  "kind": "shift",
+  "level": 2,
+  "dom": "wind",
+  "time": "2026-11-24T15:00:00+00:00",
+  "test": false
+ },
+ {
+  "city": "تبریز",
   "kind": "up",
   "level": 2,
   "dom": "wind",
@@ -309,14 +317,6 @@
   "level": 3,
   "dom": "dust",
   "time": "2026-10-24T06:00:00+00:00",
-  "test": false
- },
- {
-  "city": "اهواز",
-  "kind": "shift",
-  "level": 3,
-  "dom": "dust",
-  "time": "2026-10-24T03:00:00+00:00",
   "test": false
  }
 ]
