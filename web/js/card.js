@@ -17,6 +17,8 @@ function wrap(c,txt,x,y,maxW,lh,maxLines=3){c.direction='rtl';c.textAlign='right
   if(line){c.fillText(line,x,y);y+=lh}return y}
 function rtl(c,txt,x,y){c.direction='rtl';c.textAlign='right';c.fillText(txt,x,y)}
 function ltr(c,txt,x,y,align='left'){c.direction='ltr';c.textAlign=align;c.fillText(txt,x,y)}
+// نشان خطر: دایره‌ی تیره با حلقه‌ی رنگ سطح، آیکون به رنگ نوع خطر
+function badge(c,k,l,x,y,sz){c.save();c.beginPath();c.arc(x+sz/2,y+sz/2,sz/2,0,7);c.fillStyle='#0B1620';c.fill();c.lineWidth=Math.max(2,sz*.09);c.strokeStyle=LVCOL[l];c.stroke();c.restore();icon(c,k,x+sz*.22,y+sz*.22,sz*.56,HZCOL[k])}
 function icon(c,k,x,y,sz,col){c.save();c.translate(x,y);c.scale(sz/10,sz/10);const p=new Path2D(ICON[k]);c.lineWidth=1.3;c.lineCap='round';c.lineJoin='round';c.strokeStyle=col;c.stroke(p);if(k==='rain'||k==='ltg'){c.fillStyle=col;c.fill(p)}c.restore()}
 
 /* ---------- صحنه‌ی نمادین شهر (فضای طراحی ۳۰۰×۱۵۰، مثل دمو) ---------- */
@@ -70,11 +72,11 @@ function socialRow(c,s,x,y){const items=socialItems(s);if(!items.length)return;c
 /* ---------- کارت شهر ---------- */
 function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt==='story';c.save();c.setTransform(1,0,0,1,0,0);
   c.fillStyle=BG;c.fillRect(0,0,W,H);c.strokeStyle='rgba(110,170,200,.06)';c.lineWidth=1;for(let x=0;x<W;x+=54){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke()}for(let y=0;y<H;y+=54){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke()}
-  const col=LVCOL[P.level];const glow=c.createRadialGradient(W*.8,0,0,W*.8,0,W);glow.addColorStop(0,col+'33');glow.addColorStop(1,'transparent');c.fillStyle=glow;c.fillRect(0,0,W,H);
+  const col=LVCOL[P.level];const glow=c.createRadialGradient(W*.8,0,0,W*.8,0,W);glow.addColorStop(0,col+'1A');glow.addColorStop(1,'transparent');c.fillStyle=glow;c.fillRect(0,0,W,H);
   let y=story?150:96;
   // سربرگ
   c.fillStyle=INK;font(c,46,800);const BR=P.brand||'النینو ایران';rtl(c,BR,W-pad,y);const bw=c.measureText(BR).width;c.fillStyle=DIM;font(c,28,500);rtl(c,'· هشدار هواشناسی',W-pad-bw-14,y);
-  font(c,24,500);c.fillStyle=DIM;ltr(c,P.stamp,pad,y);
+  font(c,24,500);c.fillStyle=DIM;c.direction='rtl';c.textAlign='left';c.fillText(P.stamp,pad,y);
   if(P.test){const sx=pad+c.measureText(P.stamp).width+18;font(c,22,700);const tw=c.measureText('آزمایشی').width+28;c.fillStyle=AMBER;rr(c,sx,y-30,tw,40,20);c.fill();c.fillStyle='#1A1205';rtl(c,'آزمایشی',sx+tw-14,y-2)}
   y+=story?140:118;
   // شهر و سطح
@@ -83,7 +85,7 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
   const bx=pad,by=y-92,bW=290,bH=118;const pulse=P.level>=2?.55+.45*Math.sin(T*Math.PI*2/1.4):1;
   c.save();c.shadowColor=col;c.shadowBlur=30*pulse;c.fillStyle=col;rr(c,bx,by,bW,bH,26);c.fill();c.restore();
   c.fillStyle='#10161C';font(c,24,600);rtl(c,'سطح خطر',bx+bW-26,by+40);font(c,54,800);rtl(c,LVLN[P.level],bx+bW-26,by+98);
-  if(P.dom&&P.level)icon(c,P.dom,bx+22,by+30,52,'#10161C');
+  if(P.dom&&P.level)badge(c,P.dom,P.level,bx+18,by+29,62);
   y+=story?110:96;
   // صحنه
   const sw=W-2*pad,sh=Math.round(sw*(story?.62:.4));c.save();rr(c,pad,y,sw,sh,28);c.clip();c.save();c.translate(pad,y);c.scale(sw/300,sh/150);scene(c,P.scene,T,(P.city.length*97+7)|0);c.restore();
@@ -102,12 +104,12 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
   {const i=P.level;const sx=W-pad-(i+1)*segW-i*12+segW/2;const px=lerp(W-pad-segW/2,sx,app);c.fillStyle=INK;c.beginPath();c.moveTo(px,y-6);c.lineTo(px-13,y-26);c.lineTo(px+13,y-26);c.fill()}
   y+=story?150:110;
   // چه کنم؟
-  const bh=story?560:H-y-150;const by0=y;c.fillStyle=PANEL;rr(c,pad,y,sw,bh,26);c.fill();c.strokeStyle=P.level?col+'AA':LINE;c.lineWidth=2.5;rr(c,pad,y,sw,bh,26);c.stroke();
+  const bh=story?560:H-y-150;const by0=y;c.fillStyle=PANEL;rr(c,pad,y,sw,bh,26);c.fill();c.strokeStyle=P.level?col+'66':LINE;c.lineWidth=2.5;rr(c,pad,y,sw,bh,26);c.stroke();
   let ty=y+58;font(c,32,800);c.fillStyle=AMBER;rtl(c,'چه کنم؟',W-pad-32,ty);ty+=56;
   font(c,story?42:38,800);c.fillStyle=INK;ty=wrap(c,P.verdict.v1,W-pad-32,ty,sw-64,story?56:50,2);
   font(c,story?30:27,500);c.fillStyle='#C9DCE6';
   const lines=[];if(P.verdict.v2)lines.push(['',P.verdict.v2]);if(P.verdict.mnt&&P.level>=2)lines.push(['','⛰ '+P.verdict.mnt]);P.acts.slice(0,story?4:(P.verdict.mnt&&P.level>=2?1:2)).forEach(a=>lines.push([a.k,a.t]));if(P.nowTxt)lines.push(['',P.nowTxt]);
-  for(const [k,t] of lines){if(ty>by0+bh-70)break;ty+=6;if(k)icon(c,k,W-pad-62,ty-24,26,LVCOL[Math.max(1,P.level)]);ty=wrap(c,t,W-pad-(k?76:32),ty,sw-(k?108:64),story?42:38,2)}
+  for(const [k,t] of lines){if(ty>by0+bh-70)break;ty+=6;if(k)badge(c,k,Math.max(1,P.level),W-pad-66,ty-28,32);ty=wrap(c,t,W-pad-(k?76:32),ty,sw-(k?108:64),story?42:38,2)}
   y+=bh+(story?64:44);
   // کی؟ و پاورقی
   font(c,26,600);c.fillStyle=INK;if(P.eta)rtl(c,'کی می‌رسد؟ '+P.eta,W-pad,y);
@@ -118,11 +120,11 @@ function draw(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56,story=fmt===
 
 /* ---------- کارت وضعیت کشور (گزارش صبحگاهی) ---------- */
 function drawIran(c,P,T,fmt='post'){const [W,H]=SIZES[fmt];const pad=56;c.save();c.setTransform(1,0,0,1,0,0);c.fillStyle=BG;c.fillRect(0,0,W,H);
-  let y=96;c.fillStyle=INK;font(c,46,800);rtl(c,(P.brand||'النینو ایران')+' · وضعیت ایران',W-pad,y);font(c,24,500);c.fillStyle=DIM;ltr(c,P.stamp,pad,y);
+  let y=96;c.fillStyle=INK;font(c,46,800);rtl(c,(P.brand||'النینو ایران')+' · وضعیت ایران',W-pad,y);font(c,24,500);c.fillStyle=DIM;c.direction='rtl';c.textAlign='left';c.fillText(P.stamp,pad,y);
   y+=40;const mh=fmt==='story'?900:640;c.fillStyle=PANEL;rr(c,pad,y,W-2*pad,mh,26);c.fill();miniMap(c,pad+16,y+16,W-2*pad-32,mh-32,{...P,xy:null,pid:null,level:0},T,true);
   y+=mh+70;font(c,30,800);c.fillStyle=INK;rtl(c,P.top.length?'شهرهای در خطر، ۲۴ ساعت آینده':'هیچ شهری در خطر نیست.',W-pad,y);y+=24;
   P.top.slice(0,fmt==='story'?10:6).forEach((t,i)=>{const yy=y+i*62;c.fillStyle=LVCOL[t.l];rr(c,W-pad-20,yy+14,20,20,5);c.fill();font(c,30,700);c.fillStyle=INK;rtl(c,t.n,W-pad-40,yy+36);
-    font(c,26,500);c.fillStyle=DIM;rtl(c,`${LVLN[t.l]} · ${HZN[t.k]||''}`,W-pad-300,yy+36);if(t.k)icon(c,t.k,pad,yy+12,28,LVCOL[t.l])});
+    font(c,26,500);c.fillStyle=DIM;rtl(c,`${LVLN[t.l]} · ${HZN[t.k]||''}`,W-pad-300,yy+36);if(t.k)badge(c,t.k,t.l,pad,yy+6,40)});
   font(c,20,500);c.fillStyle=DIM;rtl(c,'پیش‌بینی مدل، نه هشدار رسمی · سازمان هواشناسی',W-pad,H-(socialItems(P.social).length?72:54));socialRow(c,P.social,W-pad,H-36)
   c.restore()}
 

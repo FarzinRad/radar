@@ -19,9 +19,12 @@ const ACT={
  wind:{1:['اشیای سبک بالکن و پشت‌بام را جمع کن.'],2:['زیر درخت، تابلو و داربست نایست.','موتورسیکلت و دوچرخه سوار نشو.'],3:['در بازه‌ی هشدار بیرون نرو؛ افتادن درخت و تابلو محتمل است.','از پنجره‌ها فاصله بگیر.']},
  ltg:{1:['به آسمان نگاه کن؛ با اولین صدای رعد به ساختمان برو.'],2:['قاعده‌ی ۳۰-۳۰: اگر فاصله‌ی برق تا صدای رعد کمتر از ۳۰ ثانیه است، به ساختمان یا خودروی سقف‌دار برو و تا ۳۰ دقیقه بعد از آخرین رعد بیرون نیا.','زیر درخت تنها، روی قله یا در فضای باز نایست.']},
  dust:{1:['بیماران قلبی و تنفسی، سالمندان و کودکان فعالیت بیرون را کم کنند.'],2:['پنجره‌ها را ببند و بیرون ماسک N95 بزن.'],3:['بیرون نرو؛ دید بسیار کم است و رانندگی خطرناک.']}};
-const ICON={rain:'M5 1C5 1 1.5 5.2 1.5 7.2a3.5 3.5 0 0 0 7 0C8.5 5.2 5 1 5 1Z',snow:'M5 .8v8.4M1.4 2.9l7.2 4.2M1.4 7.1l7.2-4.2',wind:'M.8 3.4h5.6a1.6 1.6 0 1 0-1.6-1.6M.8 6.2h7.4a1.6 1.6 0 1 1-1.6 1.6',ltg:'M5.8.6 2 5.6h2.6L3.6 9.4 8 4.2H5.3Z',dust:'M1 3h6M2.5 5.2h6.5M1 7.4h5'};
+const ICON={rain:'M5 1C5 1 1.5 5.2 1.5 7.2a3.5 3.5 0 0 0 7 0C8.5 5.2 5 1 5 1Z',snow:'M5 .8v8.4M1.4 2.9l7.2 4.2M1.4 7.1l7.2-4.2',wind:'M.8 3.4h5.6a1.6 1.6 0 1 0-1.6-1.6M.8 6.2h7.4a1.6 1.6 0 1 1-1.6 1.6',ltg:'M5.8.6 2 5.6h2.6L3.6 9.4 8 4.2H5.3Z',dust:'M.8 2.8q1.4-1.3 2.8 0t2.8 0M2.4 5.3q1.4-1.3 2.8 0t2.8 0M.8 7.8q1.4-1.3 2.8 0t2.8 0'};
 const icoSVG=(k,col,sz=14)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 10 10" style="vertical-align:-2px;margin-left:4px"><path d="${ICON[k]}" fill="${k==='rain'||k==='ltg'?col:'none'}" stroke="${col}" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const LCOL=['var(--dim)','#E0C33A','#FF8F1F','#FF4D5E'];
+// رنگ آیکون = نوع خطر؛ رنگ حلقه = سطح خطر (تا «باد قرمز» با «باران قرمز» یکی دیده نشود)
+const HZCOL={rain:'#4FA3FF',snow:'#EAF4FF',wind:'#7FE3FF',ltg:'#FFD84D',dust:'#D2A86A'};
+const hzBadgeSVG=(k,l,sz=18)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" style="vertical-align:-4px;margin-left:5px;flex:none" aria-label="${HZN[k]} · ${LVLN[l]}"><circle cx="10" cy="10" r="8.6" fill="#0B1620" stroke="${LVCOL[l]}" stroke-width="2"/><g transform="translate(5 5)"><path d="${ICON[k]}" fill="${k==='rain'||k==='ltg'?HZCOL[k]:'none'}" stroke="${HZCOL[k]}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></g></svg>`;
 const UNIT={rain:'میلی‌متر در ۲۴ ساعت',snow:'سانتی‌متر برف در ۲۴ ساعت',wind:'کیلومتر بر ساعت تندباد',dust:'میکروگرم PM10 در متر مکعب'};
 const TYPEN={rain:'باران',snow:'برف',mix:'برف و باران'};
 const MEANING={rain:['ناچیز تا معمولی','خیس‌شدن معابر؛ رانندگی با احتیاط','آب‌گرفتگی معابر و زیرگذرها، پرشدن مسیل‌ها','سیلاب ناگهانی در مسیل‌ها و معابر پست؛ خطر جانی'],
@@ -103,11 +106,20 @@ function etaFmt(e,clk){if(!e)return'—';if(e.now)return'در حال وقوع';i
 // همه‌ی شهرها از اکنون، با مدل mid: {HZ, provLevels, provEnd(pid)}
 function liveSnapshot(mid='mix'){const HZ={},prov={},pend={};LV.d.cities.forEach(c=>{const H=LV.cityHZ(c,mid,0);HZ[c.n]=H;prov[c.p]=Math.max(prov[c.p]|0,H.now);
     const w=windowOf(H.L.all,2);if(w)pend[c.p]=Math.max(pend[c.p]??-1,w.e)});return{HZ,provLevels:prov,provEnd:pid=>pend[pid]??-1}}
-function liveStamp(){const g=(new Date(LV.d.generated)-LV.t0)/36e5;const k=LV.clock(g);return `${k.day} ${k.hm} · وقت تهران`}
+// تاریخ شمسی (الگوریتم jalaali)
+const JMONTH=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+function g2j(gy,gm,gd){const gdm=[0,31,59,90,120,151,181,212,243,273,304,334];const gy2=gm>2?gy+1:gy;
+  let days=355666+365*gy+Math.floor((gy2+3)/4)-Math.floor((gy2+99)/100)+Math.floor((gy2+399)/400)+gd+gdm[gm-1];
+  let jy=-1595+33*Math.floor(days/12053);days%=12053;jy+=4*Math.floor(days/1461);days%=1461;if(days>365){jy+=Math.floor((days-1)/365);days=(days-1)%365}
+  const jm=days<186?1+Math.floor(days/31):7+Math.floor((days-186)/30);const jd=1+(days<186?days%31:(days-186)%30);return[jy,jm,jd]}
+// «۳۰ آبان · ساعت ۱۶:۳۰» برای زمانِ داده، به وقت تهران
+function jstamp(ms){const t=new Date(ms+210*6e4);const [,m,d]=g2j(t.getUTCFullYear(),t.getUTCMonth()+1,t.getUTCDate());
+  return `${fa(d)} ${JMONTH[m-1]} · ساعت ${fa(String(t.getUTCHours()).padStart(2,'0')+':'+String(t.getUTCMinutes()).padStart(2,'0'))}`}
+function liveStamp(){return jstamp(LV.t0.getTime())}
 const socialTxt=s=>{const t=socialItems(s).map(([n,h])=>n+' '+h).join(' · ');return t?'\n'+t:''};
 function cardText(P){const E=['🟢','🟡','🟠','🔴'];
   if(P.view==='iran')return `وضعیت ایران · ${P.stamp}\n`+(P.top.length?P.top.slice(0,8).map(t=>`${E[t.l]} ${t.n}: ${HZN[t.k]||''}`).join('\n'):'هیچ شهری در خطر نیست.')+`\nپیش‌بینی مدل، نه هشدار رسمی.${socialTxt(P.social)}`;
-  return `${E[P.level]} ${P.city} · ${P.level?P.domTxt:'بدون هشدار'} (${LVLN[P.level]})\nچه کنم: ${P.verdict.v1}\n${P.acts[0]?P.acts[0].t+'\n':''}${P.eta?'کی: '+P.eta+'\n':''}پیش‌بینی مدل، نه هشدار رسمی.${socialTxt(P.social)}`}
+  return `${E[P.level]} ${P.city} · ${P.level?P.domTxt:'بدون هشدار'} (${LVLN[P.level]})\n🕒 ${P.stamp}\nچه کنم: ${P.verdict.v1}\n${P.acts[0]?P.acts[0].t+'\n':''}${P.eta?'کی: '+P.eta+'\n':''}پیش‌بینی مدل، نه هشدار رسمی.${socialTxt(P.social)}`}
 // خط سوشال پایین کارت؛ فقط آن‌هایی که پر شده‌اند
 const SOCIALN={telegram:'تلگرام',instagram:'اینستاگرام',x:'X',bale:'بله'};
 function socialItems(s){return Object.keys(SOCIALN).filter(k=>s&&s[k]).map(k=>[SOCIALN[k],s[k]])}

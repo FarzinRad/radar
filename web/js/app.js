@@ -99,8 +99,9 @@ GEO.cities.forEach(c=>{const g=el('g',{'data-n':c.n},gCity);
   const pr=el('circle',{cx:c.x,cy:c.y,r:6,class:'pulse','stroke-width':1.4,style:'display:none'},g);
   const d=el('circle',{cx:c.x,cy:c.y,r:c.m?3.2:2.4,class:'citydot',fill:'#CFE4EE','stroke-width':1.2},g);
   const t=el('text',{x:c.x,y:c.y-6,'text-anchor':'middle',class:'lbl','font-size':c.m?10.5:9},g);t.textContent=c.n;
+  const icb=el('circle',{fill:'#0B1620','stroke-width':1.6,'vector-effect':'non-scaling-stroke',style:'display:none'},g);
   const ic=el('path',{fill:'none','stroke-width':1.3,'stroke-linecap':'round','stroke-linejoin':'round','vector-effect':'non-scaling-stroke',style:'display:none'},g);
-  g.addEventListener('click',()=>{if(dragMoved)return;selectCity(c.n)});cityEls[c.n]={g,pr,d,t,c,ic}});
+  g.addEventListener('click',()=>{if(dragMoved)return;selectCity(c.n)});cityEls[c.n]={g,pr,d,t,c,ic,icb}});
 const gStorm=el('g',{},svg); const stormEls={};
 STORMS.forEach(st=>{const g=el('g',{style:'cursor:pointer'},gStorm);
   const r=el('path',{class:'reticle'},g);const lb=el('text',{class:'lbl','font-size':10,'font-family':'var(--mono)','text-anchor':'middle',fill:'#FFB547',style:'direction:ltr'},g);
@@ -131,7 +132,7 @@ function updateScaleDeps(){const z=HOME.w/vb.w;
   const q=Math.sqrt(z);peakEls.forEach(o=>{const vis=S.layers.type||z>3;o.tri.style.display=vis?'':'none';o.t.style.display=vis&&(S.layers.type||z>4.5)?'':'none';const u=pxU(),s=4.5*u;o.tri.setAttribute('d',`M${o.p.x} ${o.p.y-s}L${o.p.x+s} ${o.p.y+s*.7}L${o.p.x-s} ${o.p.y+s*.7}Z`);o.t.setAttribute('x',o.p.x);o.t.setAttribute('y',o.p.y+s*.7+11*u);o.t.setAttribute('font-size',9.5*u)});
   hudBL()}
 const pxU=()=>vb.w/Math.max(1,svg.clientWidth);
-function placeIcon(o,z){const H=HZ[o.c.n];const l=H?H.now:0;const inP=S.prov&&o.c.p===S.prov;const ok=S.prov?(inP&&l>=1):(l>=2&&(o.c.m||z>2.5));if(!H||!ok||!H.dom){o.ic.style.display='none';return}const u=pxU(),sc=13*u/10,x=o.c.x+5*u,y=o.c.y+3*u;o.ic.setAttribute('d',ICON[H.dom]);o.ic.setAttribute('transform',`translate(${x} ${y}) scale(${sc})`);o.ic.setAttribute('stroke',['#CFE4EE','#F4E04D','#FFA33A','#FF4D5E'][l]);o.ic.setAttribute('fill',(H.dom==='rain'||H.dom==='ltg')?['#CFE4EE','#F4E04D','#FFA33A','#FF4D5E'][l]:'none');o.ic.style.display=''}
+function placeIcon(o,z){const H=HZ[o.c.n];const l=H?H.now:0;const inP=S.prov&&o.c.p===S.prov;const ok=S.prov?(inP&&l>=1):(l>=2&&(o.c.m||z>2.5));if(!H||!ok||!H.dom){o.ic.style.display='none';o.icb.style.display='none';return}const u=pxU(),sc=11*u/10,x=o.c.x+6*u,y=o.c.y+2*u;const col=HZCOL[H.dom];o.icb.setAttribute('cx',x+5.5*u);o.icb.setAttribute('cy',y+5.5*u);o.icb.setAttribute('r',9*u);o.icb.setAttribute('stroke',LVCOL[l]);o.icb.style.display='';o.ic.setAttribute('d',ICON[H.dom]);o.ic.setAttribute('transform',`translate(${x} ${y}) scale(${sc})`);o.ic.setAttribute('stroke',col);o.ic.setAttribute('fill',(H.dom==='rain'||H.dom==='ltg')?col:'none');o.ic.style.display=''}
 // pan & zoom
 let drag=null,dragMoved=false;
 svg.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,vb:{...vb},id:e.pointerId,cap:false};dragMoved=false});
@@ -353,7 +354,7 @@ function stripSVG(rows,opts={}){const lw=74,W=lw+72*STW+4,rh=19,top=opts.temp?54
   const cur=(S.t-HZT)*STW;if(cur>=0&&cur<=72*STW)s+=`<line x1="${cur}" x2="${cur}" y1="12" y2="${Hh}" stroke="var(--amber)" stroke-width="1.6"/>`;
   return s+'</svg>'}
 function cityRow(c){const H=HZ[c.n];const l=H?H.now:0;let sub='بدون هشدار تا ۷۲ ساعت';
-  if(H&&l>=1)sub=`${icoSVG(H.dom,LCOL[l],12)}${HZN[H.dom]}`;else if(H&&H.max72>=1){const f=firstHz(H);sub=`${icoSVG(f.k,LCOL[f.l],12)}${LVLN[f.l]} از ${at(f.s)}`}
+  if(H&&l>=1)sub=`${hzBadgeSVG(H.dom,l)}${HZN[H.dom]}`;else if(H&&H.max72>=1){const f=firstHz(H);sub=`${hzBadgeSVG(f.k,f.l)}${LVLN[f.l]} از ${at(f.s)}`}
   return `<button class="city l${l}" data-city="${c.n}" aria-current="${S.city===c.n}"><span class="dot"></span><span><span class="n">${c.n}</span><span class="e">${sub}</span></span><span class="lvl">${LVLN[l]}</span></button>`}
 /* ---------- city panel ---------- */
 function gaugeSVG(c,H){const th=H.th;const other=th.norm<60?GEO.cities.find(q=>q.n==='رشت'):GEO.cities.find(q=>q.n==='یزد');const th2=thrOf(other);const v=H.r24;
@@ -446,7 +447,7 @@ function citySceneSVG(c,lv){const r=rng(c.n.length*97+7);const G=118;const water
 function fmtV(k,v){return k==='dust'&&!LIVE?fa(v.toFixed(2)):fa(Math.round(v))}
 function decoderHTML(c,H,k){const th=hzThr(H.th,k),v=hzValue(H,k),lv=comp(v,th);
   const rows=[[1,`${fmtV(k,th[0])} تا ${fmtV(k,th[1])}`],[2,`${fmtV(k,th[1])} تا ${fmtV(k,th[2])}`],[3,`بیش از ${fmtV(k,th[2])}`]];
-  let h=`<div class="dec"><div class="dec-h">${icoSVG(k,LCOL[lv],15)}<b>${HZN[k]} در ${c.n}</b><span>پیش‌بینی: <b class="num">${fmtV(k,v)}</b> ${UNIT[k]}</span></div><table>`;
+  let h=`<div class="dec"><div class="dec-h">${hzBadgeSVG(k,lv)}<b>${HZN[k]} در ${c.n}</b><span>پیش‌بینی: <b class="num">${fmtV(k,v)}</b> ${UNIT[k]}</span></div><table>`;
   rows.forEach(([l,rng_])=>h+=`<tr class="${l===lv?'hit l'+l:'l'+l}"><td style="white-space:nowrap"><i class="sw"></i>${LVLN[l]}${l===lv?' ◀':''}</td><td style="white-space:nowrap">${rng_}</td><td>${MEANING[k][l]}</td></tr>`);
   h+='</table>';
   if(k==='rain'){h+=`<p class="note" style="margin:6px 0 0">${c.n} در یک ماه عادی این فصل حدود ${fa(Math.round(H.th.norm))} میلی‌متر باران می‌گیرد؛ ${H.th.src==='est'?'آستانه‌ها فعلاً از نرمال استان تخمین زده شده‌اند؛ با ساخته‌شدن اقلیم ERA5 شهر دقیق می‌شوند.':'آستانه‌ها از باران‌های کم‌سابقه‌ی همین شهر (ERA5) ساخته شده‌اند.'}</p>
@@ -464,11 +465,11 @@ function cityPanel(c){const H=HZ[c.n];if(!H)return'';const w=H.wx[Math.max(0,Mat
    <div class="verdict l${vl}"><div class="v1">${v1}</div>${v2?`<div class="v2">${v2}</div>`:''}${mnt?`<div class="v2">⛰ ${mnt}</div>`:''}</div>
    <button class="sharebtn" data-share="${c.n}">📣 هشدار برای دوستان: عکس و ویدیو (تلگرام، اینستاگرام، X)</button>
    ${citySceneSVG(c,lv)}<p class="note" style="margin:4px 0 8px">صحنه‌ی نمادینِ اوج ۱۲ ساعت آینده: ${sceneCaption(lv)}.</p>
-   <div class="chips">${['rain','snow','wind','ltg','dust'].filter(k=>Math.max(...H.L[k])>=1).map(k=>{const m=Math.max(...H.L[k]);const v=hzValue(H,k);const txt=k==='rain'?`${fa(Math.round(v))} میلی‌متر`:k==='snow'?`${fa(Math.round(v))} سانتی‌متر`:k==='wind'?`${fa(Math.round(v))} km/h`:'';return `<span class="chip hz l${m}">${icoSVG(k,LCOL[m],13)}${HZN[k]}: ${LVLN[m]}${txt?' · '+txt:''}</span>`}).join('')||'<span class="chip">بدون خطر</span>'}</div>`;
+   <div class="chips">${['rain','snow','wind','ltg','dust'].filter(k=>Math.max(...H.L[k])>=1).map(k=>{const m=Math.max(...H.L[k]);const v=hzValue(H,k);const txt=k==='rain'?`${fa(Math.round(v))} میلی‌متر`:k==='snow'?`${fa(Math.round(v))} سانتی‌متر`:k==='wind'?`${fa(Math.round(v))} km/h`:'';return `<span class="chip hz l${m}">${hzBadgeSVG(k,m)}${HZN[k]}: ${LVLN[m]}${txt?' · '+txt:''}</span>`}).join('')||'<span class="chip">بدون خطر</span>'}</div>`;
   const dk=['rain','snow','wind','dust'].filter(k=>Math.max(...H.L[k])>=1).sort((a,b)=>Math.max(...H.L[b])-Math.max(...H.L[a])).slice(0,2);
   if(!dk.length&&H.r24>=1)dk.push('rain');
   if(dk.length)h+=`<div class="sect"><h3>این رنگ برای ${c.n} یعنی چه؟</h3>${dk.map(k=>decoderHTML(c,H,k)).join('')}</div>`;
-  let a=[];['rain','snow','wind','ltg','dust'].forEach(k=>{const ml=Math.max(...H.L[k]);if(!ml)return;(ACT[k][ml]||ACT[k][2]||[]).forEach(t=>a.push(`${icoSVG(k,LCOL[ml],13)}${t}`))});
+  let a=[];['rain','snow','wind','ltg','dust'].forEach(k=>{const ml=Math.max(...H.L[k]);if(!ml)return;(ACT[k][ml]||ACT[k][2]||[]).forEach(t=>a.push(`${hzBadgeSVG(k,ml)}${t}`))});
   if(a.length)h+=`<div class="sect"><h3>اقدام‌های ایمنی</h3><ul class="acts">${a.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
   h+=`<div class="sect"><h3>الان</h3><div class="now"><div><b class="num">${fa(Math.round(w.T))}°</b><span>دما</span></div><div><b class="num">${fa(Math.round(w.rh))}٪</b><span>رطوبت</span></div>
    <div><b class="num">${fa(Math.round(w.wind))}</b><span>باد، km/h · تندباد ${fa(Math.round(w.gust))}</span></div><div><b class="num">${w.pr>.05?fa(w.pr.toFixed(1)):'—'}</b><span>${w.pr>.05?'mm/h، '+TYPEN[w.type]:'بدون بارش'}</span></div></div></div>`;

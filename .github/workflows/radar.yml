@@ -194,7 +194,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install requests requests-oauthlib cryptography
+      - run: pip install requests requests-oauthlib cryptography playwright
       - uses: actions/download-artifact@v4
         with:
           name: alerts
@@ -214,5 +214,10 @@ jobs:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_MODE: ${{ vars.IG_MODE || 'story' }}
+          IG_SESSION: ${{ secrets.IG_SESSION }}
+          IG_WEB_KINDS: ${{ vars.IG_WEB_KINDS || 'album,report' }}
+          IG_HEADED: "1"
           REPORT_CHANNELS: ${{ vars.REPORT_CHANNELS || 'telegram,bale,ntfy,x,instagram' }}
-        run: python -m radar.notify
+        # مرورگر اینستاگرام با پنجره‌ی مجازی (xvfb) اجرا می‌شود تا شبیه مرورگر بی‌پنجره‌ی ربات نباشد
+        run: |
+          if command -v xvfb-run >/dev/null; then xvfb-run -a python -m radar.notify; else IG_HEADED=0 python -m radar.notify; fi

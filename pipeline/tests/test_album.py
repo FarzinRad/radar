@@ -54,3 +54,20 @@ def test_album_is_one_telegram_message_and_reuses_file_ids(tmp_path, monkeypatch
     assert m1 == "sendMediaGroup" and len(media1) == 3 and media1[0]["caption"] == "🔴 شهرها"
     assert files1 == ["f0", "f1", "f2"] and files2 == []               # چت دوم بدون آپلود دوباره
     assert media2[1]["media"] == "id1"
+
+
+def test_instagram_carousel_starts_with_country_report(monkeypatch):
+    seen = {}
+
+    def instagram(a):
+        seen.setdefault(a["kind"], dict(a))
+    monkeypatch.setattr(notify, "CHANNELS", [instagram])
+    rep = {"kind": "report", "png": "r.png", "mp4": "r.mp4", "text": "📡 گزارش وضعیت\n🕒 ۳۰ آبان\nپیش‌بینی مدل، نه هشدار رسمی."}
+    alb = {"kind": "album", "png": "a0.png", "text": "🔴 شهرها", "album_media": [{"png": f"a{k}.png", "mp4": f"a{k}.mp4"} for k in range(12)]}
+    monkeypatch.setattr(notify.cfg, "load_json", lambda *a, **k: [rep, alb])
+    notify.main([])
+    assert seen["report"]["ig_merged"]
+    a = seen["album"]
+    slides = notify.ig_slides(a)
+    assert slides[0] == "r.mp4" and len(slides) == 10                 # اول کشور، بعد ۹ شهر
+    assert a["ig_caption"].startswith("📡 گزارش وضعیت") and "پیش‌بینی مدل" not in a["ig_caption"].split("🔴")[0]

@@ -227,12 +227,11 @@ def _ig_wait(g, cid, tok, tries=40):
 
 def instagram_album(a, g, ig, tok):
     """پست کارتی (carousel): هر شهر قرمز یک اسلاید ویدیو، تا ۱۰ اسلاید."""
-    items = (a.get("album_media") or [])[:10]
-    urls = [(_public(it["mp4"]), "video") if it.get("mp4") else (_public(it["png"]), "image") for it in items]
+    urls = [(_public(n), "video" if n.endswith(".mp4") else "image") for n in ig_slides(a)]
     if not urls or not _wait_public(urls[-1][0]):
         print("[notify] instagram album: media not public yet; skipped", file=sys.stderr)
         return
-    cap = a["text"][:2200]
+    cap = (a.get("ig_caption") or a["text"])[:2200]
     if len(urls) == 1:          # carousel دست‌کم ۲ اسلاید می‌خواهد
         u, t = urls[0]
         p = {"access_token": tok, "caption": cap, **({"media_type": "REELS", "video_url": u} if t == "video" else {"image_url": u})}
@@ -262,13 +261,35 @@ def instagram_album(a, g, ig, tok):
     print(f"[notify] instagram album ({len(urls)}): {r.status_code} {'' if r.ok else r.text[:300]}")
 
 
+def ig_slides(a):
+    """اسلایدهای پست کارتی: اول وضعیت کشور (اگر گزارش هم‌زمان بوده)، بعد شهرهای قرمز؛ حداکثر ۱۰."""
+    items = ([a["ig_lead"]] if a.get("ig_lead") else []) + (a.get("album_media") or [{"png": a.get("png"), "mp4": a.get("mp4")}])
+    return [it.get("mp4") or it.get("png") for it in items if it.get("mp4") or it.get("png")][:10]
+
+
+def instagram_web(a):
+    """بدون API: با نشست ورود (Secret به نام IG_SESSION) و مرورگر واقعی روی رانر گیت‌هاب."""
+    kinds = [k.strip() for k in cfg.env("IG_WEB_KINDS", "album,report").split(",") if k.strip()]
+    if not cfg.env("IG_SESSION") or a.get("kind") not in kinds or a.get("test") or a.get("ig_merged"):
+        return
+    from . import ig_web
+    paths = [str(_media(a, n)) for n in ig_slides(a)]
+    if paths:
+        ok = ig_web.post(paths, a.get("ig_caption") or a["text"])
+        print(f"[notify] instagram (web, {len(paths)} files): {'ok' if ok else 'FAILED'}")
+
+
 def instagram(a):
     ig, tok = cfg.env("IG_USER_ID"), cfg.env("IG_ACCESS_TOKEN")
-    if not (ig and tok and cfg.env("PUBLIC_BASE_URL")):
+    if not (ig and tok):
+        return instagram_web(a)
+    if not cfg.env("PUBLIC_BASE_URL"):
         return
     # توکن «ورود با اینستاگرام» (بدون صفحه‌ی فیسبوک) با IG شروع می‌شود و آدرس API خودش را دارد
     host = cfg.env("IG_API_HOST") or ("graph.instagram.com" if tok.startswith("IG") else "graph.facebook.com")
     g = f"https://{host}/{cfg.env('IG_GRAPH_VERSION', 'v23.0')}"
+    if a.get("ig_merged"):
+        return
     if a.get("kind") == "album":
         return instagram_album(a, g, ig, tok)
     modes = [m.strip() for m in cfg.env("IG_MODE", "story").split(",") if m.strip()]
@@ -326,6 +347,15 @@ def main(argv=None):
         return whoami()
     items = cfg.load_json((PRIVATE if args.private else cfg.ROOT / "out") / "alerts.json", [])
     only = {x.strip() for x in args.only.split(",") if x.strip()}
+    # اینستاگرام: گزارش کشور و شهرهای قرمز یک پست کارتی پشت سر هم می‌شوند (اسلاید اول = وضعیت کشور)
+    rep = next((x for x in items if x.get("kind") == "report" and x.get("png")), None)
+    alb = next((x for x in items if x.get("kind") == "album" and x.get("album_media")), None)
+    if rep and alb:
+        alb["ig_lead"] = {"png": rep["png"], "mp4": rep.get("mp4")}
+        from .alerts import social_line
+        head = [ln for ln in rep["text"].split("\n") if not ln.startswith("پیش‌بینی مدل") and ln != social_line()]
+        alb["ig_caption"] = "\n".join(head) + "\n\n" + alb["text"]
+        rep["ig_merged"] = True
     if args.private:        # محل‌های اختصاصی فقط به خود مشترک، از راه ربات
         only = (only or {"telegram", "bale"}) & {"telegram", "bale"}
     for a in items:

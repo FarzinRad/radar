@@ -6,7 +6,7 @@
 from datetime import datetime, timedelta
 
 from . import config as cfg, hazards as hz, subs
-from .timefmt import at, eta_text, fa, teh
+from .timefmt import at, eta_text, fa, stamp, teh
 
 STATE = cfg.STATE_DIR / "alert_state.json"
 HIST = cfg.STATE_DIR / "alert_history.json"
@@ -26,7 +26,7 @@ def message(a, now):
     """متن پیام به سبک PRD؛ کوتاه، با نوع خطر، مقدار، بازه و اقدام."""
     lv, dom = a["level"], a["dom"]
     if a["kind"] == "clear":
-        lines = [f"✅ {a['city']} · رفع خطر", f"سطح از {hz.LVLN[a['prev']]} به {hz.LVLN[lv]} رسید. سامانه رد شده یا پیش‌بینی لغو شده."]
+        lines = [f"✅ {a['city']} · رفع خطر", f"🕒 {stamp(now)}", f"سطح از {hz.LVLN[a['prev']]} به {hz.LVLN[lv]} رسید. سامانه رد شده یا پیش‌بینی لغو شده."]
     else:
         place = a['city'] + (f" (نزدیک {a['near']})" if a.get("near") else "")
         head = f"{hz.EMOJI[lv]} {place} · {hz.HZN.get(dom, 'هوای خطرناک')} ({hz.LVLN[lv]})"
@@ -34,7 +34,7 @@ def message(a, now):
             head = "🧪 آزمایشی · " + head
         val = f"{fa(a['value'])} {a['unit']}" if a.get("value") is not None else ""
         win = f"از {at(now, a['win'][0])} تا {at(now, a['win'][1])}" if a.get("win") else ""
-        lines = [head]
+        lines = [head, f"🕒 {stamp(now)}"]
         if val or win:
             lines.append(" · ".join(x for x in (val, win) if x))
         if dom:
@@ -166,7 +166,7 @@ def report(data, now, state):
         if sm["peak"] >= 2:
             rows.append((sm["peak"], c["n"], sm["dom"]))
     rows.sort(key=lambda r: (-r[0], r[1]))
-    lines = [f"{'☀️ گزارش صبحگاهی' if morning else '📡 گزارش وضعیت'} {cfg.brand()} · {fa(t.strftime('%H:%M'))}"]
+    lines = [f"{'☀️ گزارش صبحگاهی' if morning else '📡 گزارش وضعیت'} {cfg.brand()}", f"🕒 {stamp(now)}"]
     lines += [f"{hz.EMOJI[l]} {n}: {hz.HZN.get(k, '')}" for l, n, k in rows[:12]] or ["در ۲۴ ساعت آینده هیچ شهری نارنجی یا قرمز نیست."]
     if len(rows) > 12:
         lines.append(f"و {fa(len(rows) - 12)} شهر دیگر.")
@@ -200,7 +200,7 @@ def album(data, now):
         return None
     cap = int(cfg.env("ALBUM_MAX", "10"))
     shown = reds[:cap]
-    lines = ["🔴 شهرهایی که قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند:"]
+    lines = [f"🔴 وضعیت {stamp(now)}", "شهرهایی که قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند:"]
     for r in shown:
         when = "همین حالا" if r["first"] <= 0 else f"از {at(now, r['first'])}"
         lines.append(f"• {r['city']}: {hz.HZN.get(r['dom'], '')}، {when}")
