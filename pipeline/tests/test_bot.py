@@ -63,7 +63,8 @@ def test_arabic_letters_and_custom_place_and_stop(ctx, monkeypatch):
 def test_subscribers_file_is_encrypted(ctx):
     subs.save({"tg:42": {"places": [{"n": "رشت"}]}})
     raw = subs.PATH.read_bytes()
-    assert b"42" not in raw and "رشت".encode() not in raw
+    # رمزشده نباید JSON واضح باشه؛ ولیممکنه ۴۲ یا رشت تصادفاً در Base64 بیاد
+    assert b'{"tg:42"' not in raw and b'"places"' not in raw
     assert subs.load()["tg:42"]["places"][0]["n"] == "رشت"
 
 
