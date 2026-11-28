@@ -68,7 +68,21 @@ def publish(page, paths, caption):
     """paths: یک یا چند فایل (تا ۱۰ تا = پست کارتی)."""
     if not _logged_in(page):
         raise RuntimeError("نشست اینستاگرام منقضی شده؛ دوباره --export-session بزن و IG_SESSION را عوض کن")
-    page.locator(CREATE).first.click(timeout=20000)
+    # بستن پاپ‌آپ‌های احتمالی (نوتیفیکیشن، ...)
+    for dismiss in ['button[aria-label="Not Now"]', 'button:has-text("Not Now")', 'button:has-text("نه")']:
+        try:
+            page.locator(dismiss).first.click(timeout=2000)
+            pause(1, 2)
+        except Exception:
+            pass
+    try:
+        page.locator(CREATE).first.click(timeout=30000)
+    except Exception as e:
+        # دیباگ: لیست svg‌هایی که aria-label دارند
+        svgs = page.locator('svg[aria-label]').all()
+        labels = [s.get_attribute('aria-label') for s in svgs[:10]]
+        print(f"[ig_web] Create button not found. Available svg labels: {labels}", file=sys.stderr)
+        raise
     pause()
     post = page.get_by_role("link", name=L_POST)          # نسخه‌های جدید: منوی «پست / لایو»
     if post.count():
