@@ -18,9 +18,10 @@ def red_from(h):
 
 def test_red_cities_now_or_within_72h_sorted_by_first():
     d = {"now": I0, "cities": [city("زابل", red_from(30)), city("اهواز", red_from(0)), city("رشت", [2] * N),
-                               city("یزد", red_from(80))]}
+                               city("مشهد", [1] * N), city("یزد", red_from(80))]}
     r = alerts.red_cities(d)
-    assert [x["city"] for x in r] == ["اهواز", "زابل"]          # رشت نارنجی است، یزد بعد از ۷۲ ساعت
+    # اهواز (قرمز، همین حالا)، زابل (قرمز، ۳۰ ساعت دیگر)، رشت (نارنجی)، مشهد (زرد) — یزد بعد از ۷۲ ساعت
+    assert [x["city"] for x in r] == ["اهواز", "زابل", "رشت", "مشهد"]
     assert r[1]["first"] == 30 and r[1]["dom"] == "dust"
     a = alerts.album(d, datetime(2026, 11, 6, 9, tzinfo=timezone.utc))
     assert a["kind"] == "album" and "همین حالا" in a["text"] and "زابل: گردوغبار" in a["text"]

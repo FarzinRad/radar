@@ -269,8 +269,13 @@ def ig_slides(a):
 
 def instagram_web(a):
     """بدون API: با نشست ورود (Secret به نام IG_SESSION) و مرورگر واقعی روی رانر گیت‌هاب."""
-    kinds = [k.strip() for k in cfg.env("IG_WEB_KINDS", "album,report").split(",") if k.strip()]
-    if not cfg.env("IG_SESSION") or a.get("kind") not in kinds or a.get("test") or a.get("ig_merged"):
+    if not cfg.env("IG_SESSION") or a.get("test") or a.get("ig_merged"):
+        return
+    # album (± ig_lead): پست کارتی چند اسلایده
+    # report + ig_solo: فقط نقشه ایران، هیچ شهر قرمزی نیست
+    if a.get("kind") not in ("album", "report"):
+        return
+    if a.get("kind") == "report" and not a.get("ig_solo"):
         return
     from . import ig_web
     paths = [str(_media(a, n)) for n in ig_slides(a)]
@@ -351,11 +356,15 @@ def main(argv=None):
     rep = next((x for x in items if x.get("kind") == "report" and x.get("png")), None)
     alb = next((x for x in items if x.get("kind") == "album" and x.get("album_media")), None)
     if rep and alb:
+        # هر دو هستند: نقشه ایران اسلاید اول، شهرها بقیه → یک پست
         alb["ig_lead"] = {"png": rep["png"], "mp4": rep.get("mp4")}
         from .alerts import social_line
         head = [ln for ln in rep["text"].split("\n") if not ln.startswith("پیش‌بینی مدل") and ln != social_line()]
         alb["ig_caption"] = "\n".join(head) + "\n\n" + alb["text"]
         rep["ig_merged"] = True
+    elif rep and not alb:
+        # فقط گزارش کشور، شهر قرمزی نیست → همین یک اسلاید به اینستاگرام می‌رود
+        rep["ig_solo"] = True
     if args.private:        # محل‌های اختصاصی فقط به خود مشترک، از راه ربات
         only = (only or {"telegram", "bale"}) & {"telegram", "bale"}
     for a in items:

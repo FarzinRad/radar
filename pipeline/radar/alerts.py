@@ -177,33 +177,37 @@ def report(data, now, state):
             "media": True, "time": now.isoformat(), "text": "\n".join(lines), "short": "\n".join(lines)[:280]}
 
 
-def red_cities(data, horizon=72):
-    """شهرهایی که الان قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند، به ترتیب زودترین."""
+def red_cities(data, horizon=72, min_level=1):
+    """شهرهایی که الان زرد/نارنجی/قرمزند یا تا ۷۲ ساعت آینده می‌شوند، به ترتیب زودترین."""
     i0 = data["now"]
     out = []
     for c in data["cities"]:
         L = {k: hz.dec(v) for k, v in c["s"]["mix"]["L"].items()}
-        hrs = [h for h in range(i0, min(len(L["all"]), i0 + horizon)) if L["all"][h] >= 3]
+        hrs = [h for h in range(i0, min(len(L["all"]), i0 + horizon)) if L["all"][h] >= min_level]
         if not hrs:
             continue
         h = hrs[0]
-        dom = next((k for k in hz.HAZARDS if L[k][h] >= 3), None)
-        out.append({"city": c["n"], "first": h - i0, "dom": dom, "m": c["m"]})
-    out.sort(key=lambda x: (x["first"], not x["m"], x["city"]))
+        peak = max(L["all"][h2] for h2 in hrs)
+        dom = next((k for k in hz.HAZARDS if L[k][h] >= min_level), None)
+        out.append({"city": c["n"], "first": h - i0, "dom": dom, "m": c["m"], "level": peak})
+    out.sort(key=lambda x: (-x["level"], x["first"], not x["m"], x["city"]))
     return out
 
 
 def album(data, now):
-    """پست کارتی شهرهای قرمز: یک ویدیو برای هر شهر (حداکثر ALBUM_MAX، پیش‌فرض ۱۰)."""
+    """پست کارتی شهرهای نارنجی و قرمز: یک ویدیو برای هر شهر (حداکثر ALBUM_MAX، پیش‌فرض ۱۰)."""
     reds = red_cities(data)
     if not reds or cfg.env("ALBUM", "1") != "1":
         return None
     cap = int(cfg.env("ALBUM_MAX", "10"))
     shown = reds[:cap]
-    lines = [f"🔴 وضعیت {stamp(now)}", "شهرهایی که قرمزند یا تا ۷۲ ساعت آینده قرمز می‌شوند:"]
+    top = max((r["level"] for r in shown), default=1)
+    head_emoji = hz.EMOJI[min(top, len(hz.EMOJI) - 1)]
+    lines = [f"{head_emoji} وضعیت {stamp(now)}", "شهرهایی که زرد، نارنجی یا قرمزند یا تا ۷۲ ساعت آینده می‌شوند:"]
     for r in shown:
         when = "همین حالا" if r["first"] <= 0 else f"از {at(now, r['first'])}"
-        lines.append(f"• {r['city']}: {hz.HZN.get(r['dom'], '')}، {when}")
+        emoji = hz.EMOJI[min(r["level"], len(hz.EMOJI) - 1)]
+        lines.append(f"{emoji} {r['city']}: {hz.HZN.get(r['dom'], '')}، {when}")
     if len(reds) > cap:
         lines.append(f"و {fa(len(reds) - cap)} شهر دیگر.")
     lines.append("در هر ویدیو: چه می‌شود و چه کنم.")
@@ -211,10 +215,10 @@ def album(data, now):
     if social_line():
         lines.append(social_line())
     text = "\n".join(lines)
-    short = f"🔴 قرمز تا ۷۲ ساعت آینده: {'، '.join(r['city'] for r in shown)}\nپیش‌بینی مدل، نه هشدار رسمی."
+    short = f"{head_emoji} وضعیت تا ۷۲ ساعت آینده: {'، '.join(r['city'] for r in shown)}\nپیش‌بینی مدل، نه هشدار رسمی."
     if social_line():
         short += "\n" + social_line()
-    return {"city": "", "kind": "album", "test": False, "level": 3, "dom": shown[0]["dom"], "media": True,
+    return {"city": "", "kind": "album", "test": False, "level": top, "dom": shown[0]["dom"], "media": True,
             "time": now.isoformat(), "cities": shown, "text": text, "short": short[:280]}
 
 
